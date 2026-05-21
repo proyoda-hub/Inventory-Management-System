@@ -151,7 +151,10 @@
                         <input type="number" id="add_min" class="w-full border border-gray-300 p-2 rounded bg-gray-50 focus:outline-none focus:ring-2 focus:ring-highlight" min="0">
                     </div>
 
-                    <button type="submit" class="w-full bg-dark text-highlight font-bold py-3 rounded-lg mt-4 hover:bg-black transition shadow-md">บันทึกนำเข้าสต็อก</button>
+                    <div class="flex gap-2 mt-4">
+                        <button type="button" onclick="clearAddStockForm()" class="w-1/3 bg-gray-200 text-gray-700 font-bold py-3 rounded-lg hover:bg-gray-300 transition shadow-sm">ล้างข้อมูล</button>
+                        <button type="submit" class="w-2/3 bg-dark text-highlight font-bold py-3 rounded-lg hover:bg-black transition shadow-md">บันทึกนำเข้าสต็อก</button>
+                    </div>
                 </form>
             </div>
 
@@ -177,16 +180,17 @@
 
         <!-- Hidden Report Template for PDF Export -->
         <div class="hide">
-            <div id="reportContainer" class="p-8 bg-white text-black w-[800px]">
+            <!-- 🛠️ ปรับความกว้างให้พอดีหน้ากระดาษ A4 (190mm) และบังคับไม่ให้ตารางล้นขอบ -->
+            <div id="reportContainer" class="p-8 bg-white text-black mx-auto" style="width: 190mm;">
                 <h1 class="text-2xl font-bold text-center mb-6">รายงานสรุปยอดพัสดุคงเหลือ (Inventory Report)</h1>
-                <table class="w-full text-left border-collapse border border-gray-300">
+                <table class="w-full text-left border-collapse border border-gray-300 table-fixed break-words">
                     <thead class="bg-gray-100">
                         <tr>
-                            <th class="border border-gray-300 p-2">รหัส</th>
-                            <th class="border border-gray-300 p-2">หมวดหมู่</th>
-                            <th class="border border-gray-300 p-2">รายการพัสดุ</th>
-                            <th class="border border-gray-300 p-2 text-center">คงเหลือ</th>
-                            <th class="border border-gray-300 p-2 text-center">สถานะ</th>
+                            <th class="border border-gray-300 p-2 w-2/12">รหัส</th>
+                            <th class="border border-gray-300 p-2 w-3/12">หมวดหมู่</th>
+                            <th class="border border-gray-300 p-2 w-4/12">รายการพัสดุ</th>
+                            <th class="border border-gray-300 p-2 w-2/12 text-center">คงเหลือ</th>
+                            <th class="border border-gray-300 p-2 w-1/12 text-center">สถานะ</th>
                         </tr>
                     </thead>
                     <tbody id="reportTableBody"></tbody>
@@ -363,6 +367,20 @@
             if (fieldId === 'add_itemId' || fieldId === 'add_itemName') {
                 autoFillItemInfo(fieldId === 'add_itemId' ? 'id' : 'name');
             }
+        }
+
+        // 🌟 ฟังก์ชันล้างข้อมูลฟอร์ม
+        function clearAddStockForm() {
+            document.getElementById('addStockForm').reset();
+            document.getElementById('currentStockHint').classList.add('hide');
+        }
+
+        // 🌟 ฟังก์ชันเมื่อคลิกรายการพัสดุใกล้หมด
+        function fillStockFromLowStock(itemId) {
+            document.getElementById('add_itemId').value = itemId;
+            autoFillItemInfo('id');
+            document.getElementById('add_qty').focus(); // โฟกัสไปที่ช่องกรอกจำนวน
+            window.scrollTo({ top: 0, behavior: 'smooth' }); // เลื่อนหน้าจอกลับไปด้านบน
         }
 
         // 🌟 ฟังก์ชันเติมข้อมูลอัตโนมัติ (Auto-fill)
@@ -649,9 +667,10 @@
                 const result = await response.json();
                 if (result.status === 'success' && result.data.length > 0) {
                     listDiv.innerHTML = result.data.map(item => `
-                        <div class="flex justify-between border-b py-2 items-center">
+                        <div class="flex justify-between border-b py-2 items-center cursor-pointer hover:bg-red-100 transition px-2 rounded -mx-2" 
+                             onclick="fillStockFromLowStock('${item.itemId}')" title="คลิกเพื่อเติมข้อมูลพัสดุนี้">
                             <span class="font-bold text-sm">${item.itemName}</span>
-                            <span class="text-xs bg-red-100 text-red-600 px-2 py-1 rounded font-bold whitespace-nowrap ml-2">เหลือ ${item.stockQuantity}</span>
+                            <span class="text-xs bg-white text-red-600 px-2 py-1 rounded font-bold whitespace-nowrap ml-2 border border-red-200 shadow-sm">เหลือ ${item.stockQuantity}</span>
                         </div>
                     `).join('');
                 } else {
