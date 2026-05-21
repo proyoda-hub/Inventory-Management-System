@@ -384,6 +384,249 @@
         }
 
         async function processCheckout(itemsData) {
+        // ⚠️ ค้นหาฟังก์ชันที่ใช้ยืนยันการเบิก แล้วแทนที่ด้วยโค้ดด้านล่างนี้
+        async function submitCheckout() { 
+            // 1. ตรวจสอบว่าตะกร้าว่างหรือไม่
+            if (Object.keys(cart).length === 0) {
+                Swal.fire('แจ้งเตือน', 'กรุณาเลือกพัสดุอย่างน้อย 1 รายการ', 'warning');
+                return;
+            }
+
+            // 2. แปลงรูปแบบข้อมูลตะกร้าให้เป็น Array ตามที่ Backend (GAS) ต้องการ!
+            // นี่คือจุดที่มักจะทำให้ Backend พังถ้าเราส่งผิดรูปแบบ
+            const cartArray = Object.keys(cart).map(itemId => {
+                return {
+                    itemId: itemId,
+                    quantity: parseInt(cart[itemId], 10)
+                };
+            });
+
+            // 3. เตรียมข้อมูล
+            const payload = {
+                action: 'checkout',
+                userId: currentUser.userId, // ⚠️ ตรงนี้เช็คให้แน่ใจว่าเป็นตัวแปรที่เก็บ User ID ของคุณ (เช่น profile.userId, currentUser.userId)
+                cart: cartArray
+            };
+
+            Swal.fire({ title: 'กำลังบันทึกข้อมูล...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+            try {
+                const response = await fetch(GAS_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'text/plain;charset=utf-8' // 👈 สำคัญ: บังคับหลบ CORS
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                // 4. อ่านผลลัพธ์จาก Backend แบบละเอียด (ห้ามเช็คแค่ response.ok)
+                const result = await response.json();
+
+                if (result.status === 'success') {
+                    // ถ้า Backend บอกว่า success จริงๆ ค่อยโชว์
+                    Swal.fire('สำเร็จ!', 'บันทึกการเบิกพัสดุเรียบร้อยแล้ว', 'success').then(() => {
+                        cart = {}; // ล้างตะกร้า
+                        window.location.reload(); // รีเฟรชหน้าเพื่อให้สต็อกอัปเดตใหม่
+                    });
+                } else {
+                    // ❌ ถ้ามีปัญหา (เช่น สินค้าไม่พอ, หาสินค้าไม่เจอ) มันจะโชว์ Error จริงๆ ออกมาให้เราเห็นตรงนี้ครับ!
+                    Swal.fire('ระบบแจ้งเตือนข้อผิดพลาด', result.message, 'error');
+                }
+            } catch (error) {
+                Swal.fire('ปัญหาการเชื่อมต่อ', error.message, 'error');
+            }
+        }
+
+        async function mockLogin() {
+            currentUser = { userId: 'U12345', displayName: 'Mock User', pictureUrl: 'https://placehold.co/100x100/545859/FFD100?text=U' };
+            updateProfileUI();
+            await authWithBackend();
+        }
+
+        function updateProfileUI() {
+            document.getElementById('userInfo').classList.remove('hide');
+            document.getElementById('userName').textContent = currentUser.displayName;
+            document.getElementById('userImg').src = currentUser.pictureUrl;
+        }
+
+        async function authWithBackend() {
+            try {
+                const response = await fetch(GAS_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ action: 'login', user: currentUser })
+                });
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    userRole = data.role;
+                    if (userRole === 'Admin') {
+                        document.getElementById('adminBtn').classList.remove('hide');
+                    }
+                    await loadItems();
+                } else {
+                    showError('ไม่สามารถเข้าสู่ระบบฐานข้อมูลได้');
+                }
+            } catch (error) {
+                showError('การเชื่อมต่อเซิร์ฟเวอร์ล้มเหลว');
+            }
+        }
+
+        async function loadItems() {
+            document.getElementById('loading').classList.remove('hide');
+            try {
+                const response = await fetch(`${GAS_URL}?action=getItems`);
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    inventoryItems = result.data;
+                    renderUserDashboard();
+                    renderReportTable(); // สำหรับ Admin
+                    document.getElementById('loading').classList.add('hide');
+                    
+                    // สลับไปหน้า User เป็นค่าเริ่มต้น
+                    document.getElementById('userView').classList.remove('hide');
+                    if(Object.keys(cart).length > 0) document.getElementById('cartBar').classList.remove('hide');
+                }
+            } catch (error) {
+                document.getElementById('loading').classList.add('hide');
+                showError('ไม่สามารถโหลดข้อมูลพัสดุได้');
+            }
+        }
+
+        function renderUserDashboard() {
+            const container = document.getElementById('itemList');
+            container.innerHTML = '';
+
+            inventoryItems.forEach(item => {
+                const qtyInCart = cart[item.itemId] || 0;
+                const isOutOfStock = item.stockQuantity <= 0;
+
+                const card = document.createElement('div');
+                card.className = `bg-white rounded-2xl shadow p-3 flex flex-col ${isOutOfStock ? 'opacity-60 grayscale' : ''}`;
+                card.innerHTML = `
+                    <div class="aspect-square bg-gray-200 rounded-xl mb-2 overflow-hidden flex items-center justify-center">
+                        <img src="${item.imageUrl}" onerror="this.src='https://placehold.co/400x400/545859/FFD100?text=No+Image'" class="object-cover w-full h-full">
+                    </div>
+                    <div class="text-sm text-gray-500 mb-1">${item.category}</div>
+                    <div class="font-bold text-dark leading-tight mb-2 flex-1">${item.itemName}</div>
+                    <div class="flex justify-between items-center mt-auto">
+                        <span class="text-xs bg-gray-100 text-primary px-2 py-1 rounded">เหลือ: ${item.stockQuantity} ${item.unit}</span>
+                    </div>
+                    ${isOutOfStock ? 
+                        `<button disabled class="mt-3 w-full bg-gray-300 text-gray-500 py-2 rounded-lg font-bold text-sm cursor-not-allowed">หมด</button>` :
+                        `<div class="mt-3 flex items-center justify-between bg-gray-50 rounded-lg p-1 border border-gray-200">
+                            <button onclick="updateCart('${item.itemId}', -1)" class="w-8 h-8 rounded bg-white shadow flex items-center justify-center text-primary font-bold hover:bg-gray-100">-</button>
+                            <input type="number" id="qty-${item.itemId}" value="${qtyInCart}" 
+                                class="w-12 text-center font-bold bg-transparent outline-none border-none text-dark" 
+                                onchange="manualUpdateCart('${item.itemId}', this.value, ${item.stockQuantity})"
+                                onfocus="this.select()">
+                            <button onclick="updateCart('${item.itemId}', 1, ${item.stockQuantity})" class="w-8 h-8 rounded bg-primary text-highlight shadow flex items-center justify-center font-bold hover:bg-opacity-90">+</button>
+                        </div>`
+                    }
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function updateCart(itemId, change, maxStock = null) {
+            let currentQty = cart[itemId] || 0;
+            let newQty = currentQty + change;
+
+            if (newQty < 0) newQty = 0;
+            if (maxStock !== null && newQty > maxStock) {
+                Swal.fire('ข้อผิดพลาด', 'ไม่สามารถเบิกเกินจำนวนที่มีในคลังได้', 'warning');
+                return;
+            }
+
+            if (newQty === 0) {
+                delete cart[itemId];
+            } else {
+                cart[itemId] = newQty;
+            }
+
+            // Update UI
+            const qtyElement = document.getElementById(`qty-${itemId}`);
+            if (qtyElement) {
+                qtyElement.value = newQty;
+            }
+            updateCartSummary();
+        }
+
+        function manualUpdateCart(itemId, value, maxStock) {
+            let newQty = parseInt(value, 10);
+
+            // ป้องกันการกรอกตัวอักษรหรือค่าติดลบ
+            if (isNaN(newQty) || newQty < 0) {
+                newQty = 0;
+            }
+
+            // ป้องกันการเบิกเกินจำนวนที่มีในคลัง
+            if (newQty > maxStock) {
+                Swal.fire('ข้อผิดพลาด', `สามารถเบิกได้สูงสุด ${maxStock} เท่านั้น`, 'warning');
+                newQty = maxStock;
+            }
+
+            if (newQty === 0) {
+                delete cart[itemId];
+            } else {
+                cart[itemId] = newQty;
+            }
+
+            // อัปเดตช่อง input กลับเป็นตัวเลขที่ถูกต้อง
+            const qtyElement = document.getElementById(`qty-${itemId}`);
+            if (qtyElement) {
+                qtyElement.value = newQty;
+            }
+            updateCartSummary();
+        }
+
+        function updateCartSummary() {
+            const typesCount = Object.keys(cart).length;
+            document.getElementById('cartCount').textContent = typesCount;
+            
+            const cartBar = document.getElementById('cartBar');
+            if (typesCount > 0 && !document.getElementById('userView').classList.contains('hide')) {
+                cartBar.classList.remove('hide');
+            } else {
+                cartBar.classList.add('hide');
+            }
+        }
+
+        function showCartSummary() {
+            if (Object.keys(cart).length === 0) return;
+
+            let summaryHtml = '<div class="text-left max-h-60 overflow-y-auto">';
+            let itemsToCheckout = [];
+
+            for (let itemId in cart) {
+                const item = inventoryItems.find(i => i.itemId === itemId);
+                if (item) {
+                    summaryHtml += `
+                        <div class="flex justify-between border-b py-2 text-sm">
+                            <span>${item.itemName}</span>
+                            <span class="font-bold">${cart[itemId]} ${item.unit}</span>
+                        </div>`;
+                    itemsToCheckout.push({ itemId: itemId, quantity: cart[itemId] });
+                }
+            }
+            summaryHtml += '</div>';
+
+            Swal.fire({
+                title: 'ยืนยันการเบิกพัสดุ',
+                html: summaryHtml,
+                showCancelButton: true,
+                confirmButtonColor: 'rgb(84, 88, 89)',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'ยืนยันการเบิก',
+                cancelButtonText: 'ยกเลิก'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    processCheckout(itemsToCheckout);
+                }
+            });
+        }
+
+        async function processCheckout(itemsData) {
             document.getElementById('loading').classList.remove('hide');
             try {
                 const response = await fetch(GAS_URL, {
