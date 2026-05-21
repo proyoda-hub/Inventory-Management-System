@@ -108,14 +108,37 @@
             <div class="bg-white p-5 rounded-2xl shadow">
                 <h3 class="font-bold text-lg mb-4 text-dark flex items-center gap-2">➕ นำเข้าพัสดุ (Add/Update)</h3>
                 <form id="addStockForm" onsubmit="handleAddStock(event)" class="space-y-3">
-                    <div><label class="text-sm text-gray-600 block">รหัสพัสดุ (ItemID)</label><input type="text" id="add_itemId" required class="w-full border p-2 rounded bg-gray-50"></div>
-                    <div><label class="text-sm text-gray-600 block">ชื่อพัสดุ (เว้นว่างได้ถ้ามีในระบบแล้ว)</label><input type="text" id="add_itemName" class="w-full border p-2 rounded bg-gray-50"></div>
-                    <div><label class="text-sm text-gray-600 block">หมวดหมู่ (Category)</label><input type="text" id="add_category" class="w-full border p-2 rounded bg-gray-50" placeholder="เช่น อุปกรณ์ไอที, เครื่องเขียน"></div>
-                    <div class="grid grid-cols-2 gap-3">
-                        <div><label class="text-sm text-gray-600 block">จำนวนที่นำเข้า</label><input type="number" id="add_qty" required class="w-full border p-2 rounded bg-gray-50"></div>
-                        <div><label class="text-sm text-gray-600 block">หน่วย</label><input type="text" id="add_unit" class="w-full border p-2 rounded bg-gray-50"></div>
+                    <div>
+                        <label class="text-sm text-gray-600 block">รหัสพัสดุ (ItemID)</label>
+                        <input type="text" list="itemIdList" id="add_itemId" onchange="autoFillItemInfo('id')" required class="w-full border p-2 rounded bg-gray-50" placeholder="เลือกหรือพิมพ์รหัสใหม่" autocomplete="off">
+                        <datalist id="itemIdList"></datalist>
+                        <div id="currentStockHint" class="text-xs text-blue-600 mt-1 font-semibold hide"></div>
                     </div>
-                    <div><label class="text-sm text-gray-600 block">จุดแจ้งเตือนใกล้หมด (Minimum)</label><input type="number" id="add_min" class="w-full border p-2 rounded bg-gray-50"></div>
+                    <div>
+                        <label class="text-sm text-gray-600 block">ชื่อพัสดุ</label>
+                        <input type="text" list="itemNameList" id="add_itemName" onchange="autoFillItemInfo('name')" required class="w-full border p-2 rounded bg-gray-50" placeholder="เลือกหรือพิมพ์ชื่อใหม่" autocomplete="off">
+                        <datalist id="itemNameList"></datalist>
+                    </div>
+                    <div>
+                        <label class="text-sm text-gray-600 block">หมวดหมู่ (Category)</label>
+                        <input type="text" list="categoryList" id="add_category" class="w-full border p-2 rounded bg-gray-50" placeholder="เช่น อุปกรณ์ไอที, เครื่องเขียน" autocomplete="off">
+                        <datalist id="categoryList"></datalist>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="text-sm text-gray-600 block">จำนวนที่นำเข้า</label>
+                            <input type="number" id="add_qty" required class="w-full border p-2 rounded bg-gray-50" min="1">
+                        </div>
+                        <div>
+                            <label class="text-sm text-gray-600 block">หน่วย</label>
+                            <input type="text" list="unitList" id="add_unit" required class="w-full border p-2 rounded bg-gray-50" autocomplete="off">
+                            <datalist id="unitList"></datalist>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="text-sm text-gray-600 block">จุดแจ้งเตือนใกล้หมด (Minimum)</label>
+                        <input type="number" id="add_min" class="w-full border p-2 rounded bg-gray-50" min="0">
+                    </div>
                     <button type="submit" class="w-full bg-dark text-highlight font-bold py-2 rounded-lg mt-2 hover:bg-black transition">บันทึกสต็อก</button>
                 </form>
             </div>
@@ -249,6 +272,7 @@
                 
                 if (result.status === 'success') {
                     inventoryItems = result.data;
+                    populateAdminDataLists(); // 👈 ดึงข้อมูลเข้า Dropdown
                     renderCategoryTabs(); // สร้างปุ่มหมวดหมู่
                     renderItems();        // สร้างตารางพัสดุตามหมวดหมู่
                     renderReportTable();  // สำหรับ Admin
@@ -266,6 +290,61 @@
         // ==========================================
         // 🌟 ลอจิกการจัดการหมวดหมู่และการค้นหา
         // ==========================================
+        function populateAdminDataLists() {
+            const itemIdList = document.getElementById('itemIdList');
+            const itemNameList = document.getElementById('itemNameList');
+            const categoryList = document.getElementById('categoryList');
+            const unitList = document.getElementById('unitList');
+
+            if (!itemIdList) return; 
+
+            // สร้าง Dropdown จากข้อมูลในคลังแบบไม่ซ้ำกัน
+            itemIdList.innerHTML = inventoryItems.map(i => `<option value="${i.itemId}">`).join('');
+            itemNameList.innerHTML = inventoryItems.map(i => `<option value="${i.itemName}">`).join('');
+            
+            const uniqueCats = [...new Set(inventoryItems.map(i => i.category).filter(Boolean))];
+            categoryList.innerHTML = uniqueCats.map(c => `<option value="${c}">`).join('');
+
+            const uniqueUnits = [...new Set(inventoryItems.map(i => i.unit).filter(Boolean))];
+            unitList.innerHTML = uniqueUnits.map(u => `<option value="${u}">`).join('');
+        }
+
+        function autoFillItemInfo(trigger) {
+            let selectedItem = null;
+            const itemIdInput = document.getElementById('add_itemId').value.trim();
+            const itemNameInput = document.getElementById('add_itemName').value.trim();
+
+            // ค้นหาพัสดุจากรหัส หรือ ชื่อ
+            if (trigger === 'id' && itemIdInput) {
+                selectedItem = inventoryItems.find(i => i.itemId === itemIdInput);
+            } else if (trigger === 'name' && itemNameInput) {
+                selectedItem = inventoryItems.find(i => i.itemName === itemNameInput);
+            }
+
+            const stockHint = document.getElementById('currentStockHint');
+
+            if (selectedItem) {
+                // เติมข้อมูลลงช่องอื่นๆ อัตโนมัติ
+                document.getElementById('add_itemId').value = selectedItem.itemId;
+                document.getElementById('add_itemName').value = selectedItem.itemName;
+                document.getElementById('add_category').value = selectedItem.category || '';
+                document.getElementById('add_unit').value = selectedItem.unit || '';
+                document.getElementById('add_min').value = selectedItem.minimumStock || '';
+                
+                // แสดงแจ้งเตือนจำนวนคงเหลือ
+                stockHint.textContent = `✅ มีในระบบ: คงเหลือปัจจุบัน ${selectedItem.stockQuantity} ${selectedItem.unit}`;
+                stockHint.classList.remove('hide', 'text-yellow-600');
+                stockHint.classList.add('text-blue-600');
+            } else if (itemIdInput || itemNameInput) {
+                // กรณีพิมพ์พัสดุใหม่ที่ไม่เคยมี
+                stockHint.textContent = `✨ พัสดุรายการใหม่`;
+                stockHint.classList.remove('hide', 'text-blue-600');
+                stockHint.classList.add('text-yellow-600');
+            } else {
+                stockHint.classList.add('hide');
+            }
+        }
+
         function renderCategoryTabs() {
             const tabsContainer = document.getElementById('categoryTabs');
             
@@ -533,6 +612,7 @@
                 if (result.status === 'success') {
                     Swal.fire('สำเร็จ', 'บันทึกการนำเข้าพัสดุเรียบร้อย', 'success');
                     document.getElementById('addStockForm').reset();
+                    document.getElementById('currentStockHint').classList.add('hide'); // ซ่อนข้อความแจ้งเตือนยอดคงเหลือกลับ
                     loadItems();
                 } else {
                     Swal.fire('ผิดพลาด', result.message, 'error');
