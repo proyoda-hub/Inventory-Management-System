@@ -290,8 +290,16 @@
                     renderItems();
                     renderReportTable();
                     document.getElementById('loading').classList.add('hide');
-                    document.getElementById('userView').classList.remove('hide');
-                    if(Object.keys(cart).length > 0) document.getElementById('cartBar').classList.remove('hide');
+                    
+                    // ปรับปรุงลอจิกตรวจสอบการเปิดหน้า: 
+                    // ถ้ากำลังเปิดหน้า Admin อยู่ ก็ให้เปิดค้างไว้ แล้วโหลด Low Stock ใหม่
+                    const adminView = document.getElementById('adminView');
+                    if (adminView.classList.contains('hide')) {
+                        document.getElementById('userView').classList.remove('hide');
+                        if(Object.keys(cart).length > 0) document.getElementById('cartBar').classList.remove('hide');
+                    } else {
+                        fetchLowStock();
+                    }
                 }
             } catch (error) {
                 document.getElementById('loading').classList.add('hide');
