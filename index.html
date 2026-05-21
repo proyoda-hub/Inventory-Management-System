@@ -34,7 +34,7 @@
         }
         input[type="number"] { -moz-appearance: textfield; }
 
-        /* ซ่อน Scrollbar แต่ยังเลื่อนได้ (สำหรับแท็บหมวดหมู่) */
+        /* ซ่อน Scrollbar แต่ยังเลื่อนได้ (สำหรับแท็บหมวดหมู่และ Dropdown) */
         .scrollbar-hide::-webkit-scrollbar { display: none; }
         .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
@@ -65,7 +65,6 @@
             <h2 class="text-xl font-bold text-primary">รายการพัสดุ</h2>
         </div>
 
-        <!-- 🌟 ส่วนที่เพิ่มใหม่: ช่องค้นหา และ แท็บหมวดหมู่ -->
         <div class="mb-5 space-y-3 sticky top-[60px] z-40 bg-gray-100 pt-2 pb-2">
             <!-- Search Bar -->
             <div class="relative">
@@ -80,12 +79,10 @@
         </div>
 
         <!-- ตารางแสดงพัสดุ -->
-        <div id="itemList" class="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <!-- Items will be injected here -->
-        </div>
+        <div id="itemList" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
     </main>
 
-    <!-- Cart Summary Bottom Bar (For User) -->
+    <!-- Cart Summary Bottom Bar -->
     <div id="cartBar" class="fixed bottom-0 left-0 w-full bg-primary text-white p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] flex justify-between items-center z-40 rounded-t-2xl hide">
         <div>
             <span class="text-sm">เลือกแล้ว:</span>
@@ -104,42 +101,57 @@
         </div>
 
         <div class="grid md:grid-cols-2 gap-6">
-            <!-- Add Stock Form -->
+            <!-- Add Stock Form (เปลี่ยนเป็นระบบ Custom Dropdown) -->
             <div class="bg-white p-5 rounded-2xl shadow">
                 <h3 class="font-bold text-lg mb-4 text-dark flex items-center gap-2">➕ นำเข้าพัสดุ (Add/Update)</h3>
-                <form id="addStockForm" onsubmit="handleAddStock(event)" class="space-y-3">
-                    <div>
-                        <label class="text-sm text-gray-600 block">รหัสพัสดุ (ItemID)</label>
-                        <input type="text" list="itemIdList" id="add_itemId" onchange="autoFillItemInfo('id')" required class="w-full border p-2 rounded bg-gray-50" placeholder="เลือกหรือพิมพ์รหัสใหม่" autocomplete="off">
-                        <datalist id="itemIdList"></datalist>
-                        <div id="currentStockHint" class="text-xs text-blue-600 mt-1 font-semibold hide"></div>
+                <form id="addStockForm" onsubmit="handleAddStock(event)" class="space-y-4">
+                    
+                    <div class="relative">
+                        <label class="text-sm text-gray-600 block mb-1">รหัสพัสดุ (ItemID)</label>
+                        <input type="text" id="add_itemId" required class="w-full border border-gray-300 p-2 rounded bg-gray-50 focus:outline-none focus:ring-2 focus:ring-highlight focus:bg-white transition" 
+                            placeholder="พิมพ์เพื่อค้นหา หรือเพิ่มรหัสใหม่" autocomplete="off"
+                            onfocus="showCustomDropdown('add_itemId')" onblur="hideCustomDropdown('add_itemId')" oninput="filterCustomDropdown('add_itemId')">
+                        <!-- Custom Dropdown List -->
+                        <ul id="dropdown_add_itemId" class="absolute z-50 w-full bg-white border border-gray-200 rounded-lg shadow-xl max-h-48 overflow-y-auto hide mt-1 divide-y divide-gray-100 scrollbar-hide"></ul>
+                        <div id="currentStockHint" class="text-xs text-blue-600 mt-1.5 font-semibold hide"></div>
                     </div>
-                    <div>
-                        <label class="text-sm text-gray-600 block">ชื่อพัสดุ</label>
-                        <input type="text" list="itemNameList" id="add_itemName" onchange="autoFillItemInfo('name')" required class="w-full border p-2 rounded bg-gray-50" placeholder="เลือกหรือพิมพ์ชื่อใหม่" autocomplete="off">
-                        <datalist id="itemNameList"></datalist>
+
+                    <div class="relative">
+                        <label class="text-sm text-gray-600 block mb-1">ชื่อพัสดุ</label>
+                        <input type="text" id="add_itemName" required class="w-full border border-gray-300 p-2 rounded bg-gray-50 focus:outline-none focus:ring-2 focus:ring-highlight focus:bg-white transition" 
+                            placeholder="พิมพ์เพื่อค้นหา หรือเพิ่มชื่อใหม่" autocomplete="off"
+                            onfocus="showCustomDropdown('add_itemName')" onblur="hideCustomDropdown('add_itemName')" oninput="filterCustomDropdown('add_itemName')">
+                        <ul id="dropdown_add_itemName" class="absolute z-50 w-full bg-white border border-gray-200 rounded-lg shadow-xl max-h-48 overflow-y-auto hide mt-1 divide-y divide-gray-100 scrollbar-hide"></ul>
                     </div>
-                    <div>
-                        <label class="text-sm text-gray-600 block">หมวดหมู่ (Category)</label>
-                        <input type="text" list="categoryList" id="add_category" class="w-full border p-2 rounded bg-gray-50" placeholder="เช่น อุปกรณ์ไอที, เครื่องเขียน" autocomplete="off">
-                        <datalist id="categoryList"></datalist>
+
+                    <div class="relative">
+                        <label class="text-sm text-gray-600 block mb-1">หมวดหมู่ (Category)</label>
+                        <input type="text" id="add_category" class="w-full border border-gray-300 p-2 rounded bg-gray-50 focus:outline-none focus:ring-2 focus:ring-highlight focus:bg-white transition" 
+                            placeholder="เช่น อุปกรณ์ไอที, เครื่องเขียน" autocomplete="off"
+                            onfocus="showCustomDropdown('add_category')" onblur="hideCustomDropdown('add_category')" oninput="filterCustomDropdown('add_category')">
+                        <ul id="dropdown_add_category" class="absolute z-50 w-full bg-white border border-gray-200 rounded-lg shadow-xl max-h-40 overflow-y-auto hide mt-1 divide-y divide-gray-100 scrollbar-hide"></ul>
                     </div>
+
                     <div class="grid grid-cols-2 gap-3">
                         <div>
-                            <label class="text-sm text-gray-600 block">จำนวนที่นำเข้า</label>
-                            <input type="number" id="add_qty" required class="w-full border p-2 rounded bg-gray-50" min="1">
+                            <label class="text-sm text-gray-600 block mb-1">จำนวนที่นำเข้า</label>
+                            <input type="number" id="add_qty" required class="w-full border border-gray-300 p-2 rounded bg-gray-50 focus:outline-none focus:ring-2 focus:ring-highlight" min="1">
                         </div>
-                        <div>
-                            <label class="text-sm text-gray-600 block">หน่วย</label>
-                            <input type="text" list="unitList" id="add_unit" required class="w-full border p-2 rounded bg-gray-50" autocomplete="off">
-                            <datalist id="unitList"></datalist>
+                        <div class="relative">
+                            <label class="text-sm text-gray-600 block mb-1">หน่วยนับ</label>
+                            <input type="text" id="add_unit" required class="w-full border border-gray-300 p-2 rounded bg-gray-50 focus:outline-none focus:ring-2 focus:ring-highlight" 
+                                autocomplete="off" placeholder="เช่น ชิ้น, กล่อง"
+                                onfocus="showCustomDropdown('add_unit')" onblur="hideCustomDropdown('add_unit')" oninput="filterCustomDropdown('add_unit')">
+                            <ul id="dropdown_add_unit" class="absolute z-50 w-full bg-white border border-gray-200 rounded-lg shadow-xl max-h-40 overflow-y-auto hide mt-1 divide-y divide-gray-100 scrollbar-hide"></ul>
                         </div>
                     </div>
+
                     <div>
-                        <label class="text-sm text-gray-600 block">จุดแจ้งเตือนใกล้หมด (Minimum)</label>
-                        <input type="number" id="add_min" class="w-full border p-2 rounded bg-gray-50" min="0">
+                        <label class="text-sm text-gray-600 block mb-1">จุดแจ้งเตือนใกล้หมด (Minimum)</label>
+                        <input type="number" id="add_min" class="w-full border border-gray-300 p-2 rounded bg-gray-50 focus:outline-none focus:ring-2 focus:ring-highlight" min="0">
                     </div>
-                    <button type="submit" class="w-full bg-dark text-highlight font-bold py-2 rounded-lg mt-2 hover:bg-black transition">บันทึกสต็อก</button>
+
+                    <button type="submit" class="w-full bg-dark text-highlight font-bold py-3 rounded-lg mt-4 hover:bg-black transition shadow-md">บันทึกนำเข้าสต็อก</button>
                 </form>
             </div>
 
@@ -148,7 +160,7 @@
                 <!-- Low Stock Alert -->
                 <div class="bg-red-50 border border-red-200 p-5 rounded-2xl shadow">
                     <h3 class="font-bold text-lg mb-3 text-red-700 flex items-center gap-2">⚠️ แจ้งเตือนพัสดุใกล้หมด</h3>
-                    <div id="lowStockList" class="space-y-2 max-h-40 overflow-y-auto pr-2">
+                    <div id="lowStockList" class="space-y-2 max-h-40 overflow-y-auto pr-2 scrollbar-hide">
                         <!-- Low stock items will show here -->
                     </div>
                 </div>
@@ -156,7 +168,7 @@
                 <!-- Report Section -->
                 <div class="bg-white p-5 rounded-2xl shadow">
                     <h3 class="font-bold text-lg mb-3 text-dark">📊 สรุปยอดคงเหลือ</h3>
-                    <button onclick="exportReportToPDF()" class="w-full bg-blue-600 text-white font-bold py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-blue-700 transition">
+                    <button onclick="exportReportToPDF()" class="w-full bg-blue-600 text-white font-bold py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-blue-700 transition shadow">
                         ดาวน์โหลดรายงาน (PDF)
                     </button>
                 </div>
@@ -187,16 +199,14 @@
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script>
         // ==========================================
-        const GAS_URL = 'https://script.google.com/macros/s/AKfycbyqxc4Bf1PkIhnkf9w_BH2gVipOBrI5nDKpLcU6IHVfaAZCyRTxc_qQphJRw3bBdQ8/exec'; // วาง URL GAS ของคุณ
-        const LIFF_ID = '2010045466-Z0Gl17Wk'; // วาง LIFF ID ของคุณ
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbyqxc4Bf1PkIhnkf9w_BH2gVipOBrI5nDKpLcU6IHVfaAZCyRTxc_qQphJRw3bBdQ8/exec'; // ⚠️ วาง URL GAS ของคุณ
+        const LIFF_ID = '2010045466-Z0Gl17Wk'; // ⚠️ วาง LIFF ID ของคุณ
         // ==========================================
         
         let inventoryItems = [];
         let cart = {};
         let currentUser = null;
         let userRole = 'User';
-        
-        // 🌟 ตัวแปรสำหรับจัดการค้นหาและหมวดหมู่
         let currentCategory = 'ทั้งหมด';
         let searchQuery = '';
 
@@ -204,7 +214,7 @@
             if(LIFF_ID && !LIFF_ID.includes('ใส่_')) {
                 initializeLiff();
             } else {
-                mockLogin(); // สำหรับทดสอบบน Browser
+                mockLogin(); 
             }
         };
 
@@ -272,11 +282,9 @@
                 
                 if (result.status === 'success') {
                     inventoryItems = result.data;
-                    populateAdminDataLists(); // 👈 ดึงข้อมูลเข้า Dropdown
-                    renderCategoryTabs(); // สร้างปุ่มหมวดหมู่
-                    renderItems();        // สร้างตารางพัสดุตามหมวดหมู่
-                    renderReportTable();  // สำหรับ Admin
-                    
+                    renderCategoryTabs();
+                    renderItems();
+                    renderReportTable();
                     document.getElementById('loading').classList.add('hide');
                     document.getElementById('userView').classList.remove('hide');
                     if(Object.keys(cart).length > 0) document.getElementById('cartBar').classList.remove('hide');
@@ -288,69 +296,112 @@
         }
 
         // ==========================================
-        // 🌟 ลอจิกการจัดการหมวดหมู่และการค้นหา
+        // 🌟 ระบบ Custom Dropdown / Auto-complete (แก้ปัญหา iOS Datalist)
         // ==========================================
-        function populateAdminDataLists() {
-            const itemIdList = document.getElementById('itemIdList');
-            const itemNameList = document.getElementById('itemNameList');
-            const categoryList = document.getElementById('categoryList');
-            const unitList = document.getElementById('unitList');
-
-            if (!itemIdList) return; 
-
-            // สร้าง Dropdown จากข้อมูลในคลังแบบไม่ซ้ำกัน
-            itemIdList.innerHTML = inventoryItems.map(i => `<option value="${i.itemId}">`).join('');
-            itemNameList.innerHTML = inventoryItems.map(i => `<option value="${i.itemName}">`).join('');
-            
-            const uniqueCats = [...new Set(inventoryItems.map(i => i.category).filter(Boolean))];
-            categoryList.innerHTML = uniqueCats.map(c => `<option value="${c}">`).join('');
-
-            const uniqueUnits = [...new Set(inventoryItems.map(i => i.unit).filter(Boolean))];
-            unitList.innerHTML = uniqueUnits.map(u => `<option value="${u}">`).join('');
+        function getDropdownData(fieldId) {
+            if (fieldId === 'add_itemId') return inventoryItems.map(i => i.itemId);
+            if (fieldId === 'add_itemName') return inventoryItems.map(i => i.itemName);
+            if (fieldId === 'add_category') return [...new Set(inventoryItems.map(i => i.category).filter(Boolean))];
+            if (fieldId === 'add_unit') return [...new Set(inventoryItems.map(i => i.unit).filter(Boolean))];
+            return [];
         }
 
+        function renderDropdown(fieldId, filterText = '') {
+            const ul = document.getElementById(`dropdown_${fieldId}`);
+            if (!ul) return;
+
+            let data = getDropdownData(fieldId);
+            
+            // กรองข้อมูลตามที่พิมพ์
+            if (filterText) {
+                data = data.filter(item => String(item).toLowerCase().includes(String(filterText).toLowerCase()));
+            }
+
+            // จำกัดการแสดงผลแค่ 15 รายการเพื่อไม่ให้เมนูยาวเกินไป
+            data = data.slice(0, 15);
+
+            if (data.length === 0) {
+                ul.classList.add('hide');
+                return;
+            }
+
+            // ใช้ onmousedown แทน onclick เพราะมันทำงานเร็วกว่า onblur ของ input ทำให้ไม่บั๊กบนมือถือ
+            ul.innerHTML = data.map(item => `
+                <li class="px-3 py-2.5 cursor-pointer hover:bg-gray-100 text-sm truncate text-gray-800 transition-colors" 
+                    onmousedown="selectDropdownItem('${fieldId}', '${String(item).replace(/'/g, "\\'")}')">
+                    ${item}
+                </li>
+            `).join('');
+            ul.classList.remove('hide');
+        }
+
+        function showCustomDropdown(fieldId) {
+            const input = document.getElementById(fieldId);
+            renderDropdown(fieldId, input.value); // แสดงรายการทั้งหมด หรือกรองตามค่าที่มีอยู่
+        }
+
+        function hideCustomDropdown(fieldId) {
+            const ul = document.getElementById(`dropdown_${fieldId}`);
+            if (ul) ul.classList.add('hide');
+        }
+
+        function filterCustomDropdown(fieldId) {
+            const input = document.getElementById(fieldId);
+            renderDropdown(fieldId, input.value);
+            // ให้ Auto-fill ทำงานทันทีตอนพิมพ์ด้วย เผื่อพิมพ์จนเจอคำเป๊ะๆ
+            if (fieldId === 'add_itemId' || fieldId === 'add_itemName') {
+                autoFillItemInfo(fieldId === 'add_itemId' ? 'id' : 'name');
+            }
+        }
+
+        function selectDropdownItem(fieldId, value) {
+            const input = document.getElementById(fieldId);
+            input.value = value;
+            hideCustomDropdown(fieldId);
+            
+            // หลังจากกดเลือก ให้ดึงข้อมูลมาเติมช่องอื่นให้ครบ
+            if (fieldId === 'add_itemId' || fieldId === 'add_itemName') {
+                autoFillItemInfo(fieldId === 'add_itemId' ? 'id' : 'name');
+            }
+        }
+
+        // 🌟 ฟังก์ชันเติมข้อมูลอัตโนมัติ (Auto-fill)
         function autoFillItemInfo(trigger) {
             let selectedItem = null;
             const itemIdInput = document.getElementById('add_itemId').value.trim();
             const itemNameInput = document.getElementById('add_itemName').value.trim();
 
-            // ค้นหาพัสดุจากรหัส หรือ ชื่อ
             if (trigger === 'id' && itemIdInput) {
-                selectedItem = inventoryItems.find(i => i.itemId === itemIdInput);
+                selectedItem = inventoryItems.find(i => String(i.itemId) === itemIdInput);
             } else if (trigger === 'name' && itemNameInput) {
-                selectedItem = inventoryItems.find(i => i.itemName === itemNameInput);
+                selectedItem = inventoryItems.find(i => String(i.itemName) === itemNameInput);
             }
 
             const stockHint = document.getElementById('currentStockHint');
 
             if (selectedItem) {
-                // เติมข้อมูลลงช่องอื่นๆ อัตโนมัติ
                 document.getElementById('add_itemId').value = selectedItem.itemId;
                 document.getElementById('add_itemName').value = selectedItem.itemName;
                 document.getElementById('add_category').value = selectedItem.category || '';
                 document.getElementById('add_unit').value = selectedItem.unit || '';
                 document.getElementById('add_min').value = selectedItem.minimumStock || '';
                 
-                // แสดงแจ้งเตือนจำนวนคงเหลือ
-                stockHint.textContent = `✅ มีในระบบ: คงเหลือปัจจุบัน ${selectedItem.stockQuantity} ${selectedItem.unit}`;
+                stockHint.textContent = `✅ มีในระบบ: คงเหลือ ${selectedItem.stockQuantity} ${selectedItem.unit}`;
                 stockHint.classList.remove('hide', 'text-yellow-600');
                 stockHint.classList.add('text-blue-600');
             } else if (itemIdInput || itemNameInput) {
-                // กรณีพิมพ์พัสดุใหม่ที่ไม่เคยมี
-                stockHint.textContent = `✨ พัสดุรายการใหม่`;
+                stockHint.textContent = `✨ สร้างพัสดุรายการใหม่`;
                 stockHint.classList.remove('hide', 'text-blue-600');
                 stockHint.classList.add('text-yellow-600');
             } else {
                 stockHint.classList.add('hide');
             }
         }
+        // ==========================================
 
         function renderCategoryTabs() {
             const tabsContainer = document.getElementById('categoryTabs');
-            
-            // ดึงหมวดหมู่ทั้งหมดแบบไม่ซ้ำกัน (ถ้าในชีตไม่ได้กรอก จะให้เป็น 'ทั่วไป')
             const uniqueCategories = [...new Set(inventoryItems.map(item => item.category ? item.category.trim() : 'ทั่วไป'))];
-            // เอาคำว่า 'ทั้งหมด' ไว้หน้าสุดเสมอ
             const allCategories = ['ทั้งหมด', ...uniqueCategories.filter(c => c !== '')];
 
             tabsContainer.innerHTML = allCategories.map(cat => {
@@ -367,8 +418,8 @@
 
         function setCategory(cat) {
             currentCategory = cat;
-            renderCategoryTabs(); // อัปเดตสีปุ่ม
-            renderItems();        // อัปเดตรายการพัสดุ
+            renderCategoryTabs();
+            renderItems();
         }
 
         function handleSearch(query) {
@@ -380,12 +431,11 @@
             const container = document.getElementById('itemList');
             container.innerHTML = '';
 
-            // กรองข้อมูลตาม "หมวดหมู่" และ "คำค้นหา"
             const filteredItems = inventoryItems.filter(item => {
                 const itemCat = item.category ? item.category.trim() : 'ทั่วไป';
                 const matchCategory = (currentCategory === 'ทั้งหมด') || (itemCat === currentCategory);
-                const matchSearch = item.itemName.toLowerCase().includes(searchQuery) || 
-                                    item.itemId.toLowerCase().includes(searchQuery);
+                const matchSearch = String(item.itemName).toLowerCase().includes(searchQuery) || 
+                                    String(item.itemId).toLowerCase().includes(searchQuery);
                 return matchCategory && matchSearch;
             });
 
@@ -434,53 +484,41 @@
                 container.appendChild(card);
             });
         }
-        // ==========================================
 
         function updateCart(itemId, change, maxStock = null) {
             let currentQty = cart[itemId] || 0;
             let newQty = currentQty + change;
-
             if (newQty < 0) newQty = 0;
             if (maxStock !== null && newQty > maxStock) {
                 Swal.fire('ข้อผิดพลาด', 'ไม่สามารถเบิกเกินจำนวนที่มีในคลังได้', 'warning');
                 return;
             }
-
-            if (newQty === 0) {
-                delete cart[itemId];
-            } else {
-                cart[itemId] = newQty;
-            }
+            if (newQty === 0) delete cart[itemId];
+            else cart[itemId] = newQty;
 
             const qtyElement = document.getElementById(`qty-${itemId}`);
-            if (qtyElement) {
-                qtyElement.value = newQty;
-            }
+            if (qtyElement) qtyElement.value = newQty;
             updateCartSummary();
         }
 
         function manualUpdateCart(itemId, value, maxStock) {
             let newQty = parseInt(value, 10);
             if (isNaN(newQty) || newQty < 0) newQty = 0;
-
             if (newQty > maxStock) {
                 Swal.fire('ข้อผิดพลาด', `สามารถเบิกได้สูงสุด ${maxStock} เท่านั้น`, 'warning');
                 newQty = maxStock;
             }
-
             if (newQty === 0) delete cart[itemId];
             else cart[itemId] = newQty;
 
             const qtyElement = document.getElementById(`qty-${itemId}`);
             if (qtyElement) qtyElement.value = newQty;
-            
             updateCartSummary();
         }
 
         function updateCartSummary() {
             const typesCount = Object.keys(cart).length;
             document.getElementById('cartCount').textContent = typesCount;
-            
             const cartBar = document.getElementById('cartBar');
             if (typesCount > 0 && !document.getElementById('userView').classList.contains('hide')) {
                 cartBar.classList.remove('hide');
@@ -491,17 +529,15 @@
 
         function showCartSummary() {
             if (Object.keys(cart).length === 0) return;
-
-            let summaryHtml = '<div class="text-left max-h-60 overflow-y-auto">';
+            let summaryHtml = '<div class="text-left max-h-60 overflow-y-auto divide-y">';
             let itemsToCheckout = [];
-
             for (let itemId in cart) {
-                const item = inventoryItems.find(i => i.itemId === itemId);
+                const item = inventoryItems.find(i => String(i.itemId) === String(itemId));
                 if (item) {
                     summaryHtml += `
-                        <div class="flex justify-between border-b py-2 text-sm">
-                            <span>${item.itemName}</span>
-                            <span class="font-bold">${cart[itemId]} ${item.unit}</span>
+                        <div class="flex justify-between py-3 text-sm">
+                            <span class="pr-2">${item.itemName}</span>
+                            <span class="font-bold whitespace-nowrap text-primary">${cart[itemId]} ${item.unit}</span>
                         </div>`;
                     itemsToCheckout.push({ itemId: itemId, quantity: cart[itemId] });
                 }
@@ -517,54 +553,37 @@
                 confirmButtonText: 'ยืนยันการเบิก',
                 cancelButtonText: 'ยกเลิก'
             }).then((result) => {
-                if (result.isConfirmed) {
-                    processCheckout(itemsToCheckout);
-                }
+                if (result.isConfirmed) processCheckout(itemsToCheckout);
             });
         }
 
         async function processCheckout(itemsData) {
             document.getElementById('loading').classList.remove('hide');
+            const payload = { action: 'checkout', userId: currentUser.userId, cart: itemsData };
             
-            const payload = { 
-                action: 'checkout', 
-                userId: currentUser.userId,
-                cart: itemsData
-            };
-            
-            console.log("🚀 [DEBUG] กำลังส่งข้อมูลไป GAS:", payload); 
-
             try {
                 const response = await fetch(GAS_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                     body: JSON.stringify(payload)
                 });
-                
-                console.log("🌐 [DEBUG] รหัสการเชื่อมต่อ:", response.status); 
                 const rawText = await response.text();
-                
                 let result;
-                try {
-                    result = JSON.parse(rawText);
-                } catch(e) {
-                    throw new Error("ระบบฝั่ง GAS ตอบกลับมาผิดรูปแบบ (ลองดูที่ Console ข้อมูลดิบ)");
-                }
+                try { result = JSON.parse(rawText); } catch(e) { throw new Error("ระบบฝั่ง GAS ตอบกลับมาผิดรูปแบบ"); }
                 
                 document.getElementById('loading').classList.add('hide');
-                
                 if (result.status === 'success') {
-                    cart = {}; // ล้างตะกร้า
+                    cart = {};
                     updateCartSummary();
-                    Swal.fire('สำเร็จ!', 'บันทึกการเบิกพัสดุเรียบร้อยแล้ว', 'success').then(() => {
-                        loadItems(); // โหลดข้อมูลใหม่
+                    Swal.fire('สำเร็จ!', 'บันทึกการเบิกพัสดุเรียบร้อยแล้วระบบได้แจ้งเตือนไปที่ LINE ของคุณ', 'success').then(() => {
+                        loadItems();
                     });
                 } else {
                     Swal.fire('เกิดข้อผิดพลาด', result.message, 'error');
                 }
             } catch (error) {
                 document.getElementById('loading').classList.add('hide');
-                Swal.fire('ผิดพลาด', 'ไม่สามารถเชื่อมต่อได้: ' + error.message, 'error');
+                showError('ไม่สามารถเชื่อมต่อได้: ' + error.message);
             }
         }
 
@@ -592,7 +611,6 @@
                 item: {
                     itemId: document.getElementById('add_itemId').value,
                     itemName: document.getElementById('add_itemName').value,
-                    // ส่งหมวดหมู่ไปด้วย (ถ้าเพิ่มใหม่)
                     category: document.getElementById('add_category').value || 'ทั่วไป',
                     quantity: document.getElementById('add_qty').value,
                     minimumStock: document.getElementById('add_min').value || 5,
@@ -612,14 +630,14 @@
                 if (result.status === 'success') {
                     Swal.fire('สำเร็จ', 'บันทึกการนำเข้าพัสดุเรียบร้อย', 'success');
                     document.getElementById('addStockForm').reset();
-                    document.getElementById('currentStockHint').classList.add('hide'); // ซ่อนข้อความแจ้งเตือนยอดคงเหลือกลับ
+                    document.getElementById('currentStockHint').classList.add('hide');
                     loadItems();
                 } else {
                     Swal.fire('ผิดพลาด', result.message, 'error');
                 }
             } catch (error) {
                 document.getElementById('loading').classList.add('hide');
-                Swal.fire('ผิดพลาด', 'เชื่อมต่อระบบล้มเหลว', 'error');
+                showError('เชื่อมต่อระบบล้มเหลว');
             }
         }
 
@@ -632,8 +650,8 @@
                 if (result.status === 'success' && result.data.length > 0) {
                     listDiv.innerHTML = result.data.map(item => `
                         <div class="flex justify-between border-b py-2 items-center">
-                            <span class="font-bold">${item.itemName}</span>
-                            <span class="text-xs bg-red-100 text-red-600 px-2 py-1 rounded">เหลือ ${item.stockQuantity} (ขั้นต่ำ ${item.minimumStock})</span>
+                            <span class="font-bold text-sm">${item.itemName}</span>
+                            <span class="text-xs bg-red-100 text-red-600 px-2 py-1 rounded font-bold whitespace-nowrap ml-2">เหลือ ${item.stockQuantity}</span>
                         </div>
                     `).join('');
                 } else {
@@ -663,9 +681,7 @@
 
         function exportReportToPDF() {
             const element = document.getElementById('reportContainer');
-            // ทำให้ส่วนที่ซ่อนอยู่ปรากฏขึ้นมาชั่วคราวเพื่อเรนเดอร์ PDF
             element.parentElement.classList.remove('hide');
-            
             const opt = {
                 margin:       10,
                 filename:     `Inventory_Report_${new Date().toISOString().split('T')[0]}.pdf`,
@@ -673,9 +689,7 @@
                 html2canvas:  { scale: 2 },
                 jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
             };
-            
             html2pdf().set(opt).from(element).save().then(() => {
-                // ซ่อนกลับเมื่อโหลดเสร็จ
                 element.parentElement.classList.add('hide');
             });
         }
