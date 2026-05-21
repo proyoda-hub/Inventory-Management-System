@@ -3,31 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ระบบเบิกจ่ายพัสดุ</title>
-    
-    <!-- Tailwind CSS -->
+    <title>ระบบเบิกพัสดุ</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    
+    <!-- กำหนด Theme สีตามที่ออกแบบ -->
     <script>
         tailwind.config = {
             theme: {
                 extend: {
                     colors: {
-                        primary: 'rgb(84, 88, 89)',    // Gray
-                        highlight: 'rgb(255, 209, 0)', // Yellow
-                        dark: 'rgb(16, 24, 32)'        // Black/Dark Gray
+                        primary: 'rgb(84, 88, 89)',
+                        highlight: 'rgb(255, 209, 0)',
+                        dark: 'rgb(16, 24, 32)'
                     }
                 }
             }
         }
     </script>
-    
-    <!-- LIFF SDK -->
-    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-    <!-- SweetAlert2 for nice alerts -->
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <!-- html2pdf for exporting reports -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
         body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
@@ -48,135 +42,131 @@
 
     <!-- Navbar -->
     <nav class="bg-dark text-highlight p-4 shadow-md sticky top-0 z-50 flex justify-between items-center">
-        <div class="font-bold text-xl flex items-center gap-2">
+        <div class="font-bold text-lg flex items-center gap-2">
             📦 ระบบเบิกพัสดุ
         </div>
         <div id="userInfo" class="flex items-center gap-2 hide">
-            <img id="userImg" src="" alt="Profile" class="w-8 h-8 rounded-full border-2 border-highlight">
-            <span id="userName" class="text-sm hidden sm:inline"></span>
-            <button id="adminBtn" class="hide bg-highlight text-dark px-3 py-1 rounded-full text-xs font-bold" onclick="toggleAdminMode()">Admin</button>
+            <span id="userName" class="text-sm font-semibold text-white"></span>
+            <img id="userImg" src="" class="w-8 h-8 rounded-full border border-highlight object-cover">
+            <button id="adminBtn" onclick="toggleAdminMode()" class="hide ml-2 bg-primary text-white text-xs px-2 py-1 rounded">Admin</button>
         </div>
     </nav>
 
     <!-- Loading Overlay -->
     <div id="loading" class="fixed inset-0 bg-dark/80 flex flex-col justify-center items-center z-[100] text-highlight">
-        <svg class="animate-spin h-10 w-10 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-        </svg>
-        <p class="animate-pulse">กำลังโหลดระบบ...</p>
+        <div class="animate-spin rounded-full h-12 w-12 border-b-4 border-highlight mb-4"></div>
+        <p class="font-bold">กำลังโหลดข้อมูล...</p>
     </div>
 
     <!-- User View (Dashboard) -->
-    <main id="userView" class="hide p-4 max-w-4xl mx-auto">
-        <h2 class="text-2xl font-bold text-primary mb-4 border-b-4 border-highlight inline-block pb-1">รายการพัสดุ</h2>
-        <div id="itemList" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            <!-- Items will be rendered here -->
+    <main id="userView" class="p-4 max-w-4xl mx-auto hide">
+        <h2 class="text-xl font-bold mb-4 text-primary border-b-2 border-highlight inline-block pb-1">รายการพัสดุ</h2>
+        <div id="itemList" class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <!-- Items will be injected here -->
         </div>
     </main>
 
     <!-- Cart Summary Bottom Bar (For User) -->
-    <div id="cartBar" class="hide fixed bottom-0 left-0 w-full bg-primary text-white p-4 shadow-lg flex justify-between items-center z-40 rounded-t-2xl">
+    <div id="cartBar" class="fixed bottom-0 left-0 w-full bg-primary text-white p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] flex justify-between items-center z-40 rounded-t-2xl hide">
         <div>
             <span class="text-sm">เลือกแล้ว:</span>
-            <span id="cartCount" class="font-bold text-highlight text-xl ml-1">0</span>
-            <span class="text-sm">รายการ</span>
+            <span id="cartCount" class="font-bold text-highlight text-lg ml-1">0</span> รายการ
         </div>
-        <button onclick="showCartSummary()" class="bg-highlight text-dark font-bold py-2 px-6 rounded-full hover:bg-yellow-500 transition shadow-md">
-            ดูตะกร้า / ยืนยันเบิก
+        <button onclick="showCartSummary()" class="bg-highlight text-dark font-bold px-6 py-2 rounded-full hover:bg-yellow-400 transition transform hover:scale-105 shadow-lg">
+            ยืนยันการเบิก
         </button>
     </div>
 
     <!-- Admin View -->
     <main id="adminView" class="hide p-4 max-w-4xl mx-auto">
         <div class="flex justify-between items-center mb-6">
-            <h2 class="text-2xl font-bold text-dark border-b-4 border-highlight inline-block pb-1">แดชบอร์ดผู้ดูแล</h2>
-            <button onclick="toggleAdminMode()" class="text-sm text-primary underline">กลับโหมด User</button>
+            <h2 class="text-xl font-bold text-primary border-b-2 border-highlight inline-block pb-1">โหมดผู้ดูแลระบบ</h2>
+            <button onclick="toggleAdminMode()" class="bg-gray-200 text-dark px-3 py-1 rounded text-sm font-bold">กลับหน้าแรก</button>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-            <!-- Add Stock Card -->
-            <div class="bg-white p-6 rounded-2xl shadow-md border-l-4 border-primary">
-                <h3 class="font-bold text-lg mb-4 text-primary">📥 นำเข้าพัสดุ</h3>
-                <form id="addStockForm" onsubmit="handleAddStock(event)" class="flex flex-col gap-3">
-                    <input type="text" id="add_itemId" placeholder="รหัสพัสดุ (ItemID)" class="p-2 border rounded border-gray-300" required>
-                    <input type="text" id="add_itemName" placeholder="ชื่อพัสดุ (ถ้าเป็นของใหม่)" class="p-2 border rounded border-gray-300">
-                    <input type="number" id="add_qty" placeholder="จำนวนที่นำเข้า" class="p-2 border rounded border-gray-300" required min="1">
-                    <div class="grid grid-cols-2 gap-2">
-                         <input type="number" id="add_min" placeholder="จุดแจ้งเตือน" class="p-2 border rounded border-gray-300">
-                         <input type="text" id="add_unit" placeholder="หน่วย (เช่น ชิ้น)" class="p-2 border rounded border-gray-300">
+        <div class="grid md:grid-cols-2 gap-6">
+            <!-- Add Stock Form -->
+            <div class="bg-white p-5 rounded-2xl shadow">
+                <h3 class="font-bold text-lg mb-4 text-dark flex items-center gap-2">➕ นำเข้าพัสดุ (Add/Update)</h3>
+                <form id="addStockForm" onsubmit="handleAddStock(event)" class="space-y-3">
+                    <div><label class="text-sm text-gray-600 block">รหัสพัสดุ (ItemID)</label><input type="text" id="add_itemId" required class="w-full border p-2 rounded bg-gray-50"></div>
+                    <div><label class="text-sm text-gray-600 block">ชื่อพัสดุ (เว้นว่างได้ถ้ามีในระบบแล้ว)</label><input type="text" id="add_itemName" class="w-full border p-2 rounded bg-gray-50"></div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div><label class="text-sm text-gray-600 block">จำนวนที่นำเข้า</label><input type="number" id="add_qty" required class="w-full border p-2 rounded bg-gray-50"></div>
+                        <div><label class="text-sm text-gray-600 block">หน่วย</label><input type="text" id="add_unit" class="w-full border p-2 rounded bg-gray-50"></div>
                     </div>
-                    <button type="submit" class="bg-primary text-white font-bold py-2 rounded shadow hover:bg-opacity-90 mt-2">บันทึกนำเข้า</button>
+                    <div><label class="text-sm text-gray-600 block">จุดแจ้งเตือนใกล้หมด (Minimum)</label><input type="number" id="add_min" class="w-full border p-2 rounded bg-gray-50"></div>
+                    <button type="submit" class="w-full bg-dark text-highlight font-bold py-2 rounded-lg mt-2">บันทึกสต็อก</button>
                 </form>
             </div>
 
-            <!-- Low Stock Card -->
-            <div class="bg-white p-6 rounded-2xl shadow-md border-l-4 border-highlight flex flex-col">
-                <h3 class="font-bold text-lg mb-4 text-dark flex justify-between">
-                    <span>⚠️ พัสดุใกล้หมด</span>
-                    <button onclick="fetchLowStock()" class="text-xs bg-gray-200 px-2 py-1 rounded">รีเฟรช</button>
-                </h3>
-                <div id="lowStockList" class="flex-1 overflow-y-auto max-h-48 text-sm text-gray-700">
-                    <!-- Low stock items go here -->
-                    <p class="text-gray-400 italic">คลิกรีเฟรชเพื่อดูข้อมูล</p>
+            <!-- Low Stock & Reports -->
+            <div class="space-y-6">
+                <!-- Low Stock Alert -->
+                <div class="bg-red-50 border border-red-200 p-5 rounded-2xl shadow">
+                    <h3 class="font-bold text-lg mb-3 text-red-700 flex items-center gap-2">⚠️ แจ้งเตือนพัสดุใกล้หมด</h3>
+                    <div id="lowStockList" class="space-y-2 max-h-40 overflow-y-auto pr-2">
+                        <!-- Low stock items will show here -->
+                    </div>
+                </div>
+
+                <!-- Report Section -->
+                <div class="bg-white p-5 rounded-2xl shadow">
+                    <h3 class="font-bold text-lg mb-3 text-dark">📊 สรุปยอดคงเหลือ</h3>
+                    <button onclick="exportReportToPDF()" class="w-full bg-blue-600 text-white font-bold py-2 rounded-lg flex items-center justify-center gap-2">
+                        ดาวน์โหลดรายงาน (PDF)
+                    </button>
                 </div>
             </div>
         </div>
 
-        <!-- Inventory Report -->
-        <div class="bg-white p-6 rounded-2xl shadow-md overflow-hidden">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="font-bold text-lg text-primary">📊 รายงานคลังพัสดุ</h3>
-                <button onclick="exportReportToPDF()" class="bg-dark text-highlight px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2">
-                    ดาวน์โหลด PDF
-                </button>
-            </div>
-            <div id="reportContainer" class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
-                    <thead>
-                        <tr class="bg-primary text-white">
-                            <th class="p-2 border">รหัส</th>
-                            <th class="p-2 border">ชื่อ</th>
-                            <th class="p-2 border text-center">คงเหลือ</th>
-                            <th class="p-2 border text-center">สถานะ</th>
+        <!-- Hidden Report Template for PDF Export -->
+        <div class="hide">
+            <div id="reportContainer" class="p-8 bg-white text-black w-[800px]">
+                <h1 class="text-2xl font-bold text-center mb-6">รายงานสรุปยอดพัสดุคงเหลือ (Inventory Report)</h1>
+                <table class="w-full text-left border-collapse border border-gray-300">
+                    <thead class="bg-gray-100">
+                        <tr>
+                            <th class="border border-gray-300 p-2">รหัส</th>
+                            <th class="border border-gray-300 p-2">รายการพัสดุ</th>
+                            <th class="border border-gray-300 p-2 text-center">คงเหลือ</th>
+                            <th class="border border-gray-300 p-2 text-center">สถานะ</th>
                         </tr>
                     </thead>
-                    <tbody id="reportTableBody">
-                        <!-- Table rows generated by JS -->
-                    </tbody>
+                    <tbody id="reportTableBody"></tbody>
                 </table>
             </div>
         </div>
     </main>
 
+    <!-- LIFF SDK -->
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script>
-        // ================= CONFIGURATION =================
-        const LIFF_ID = '2010045466-Z0Gl17Wk';
-        const GAS_URL = 'https://script.google.com/macros/s/AKfycbyqxc4Bf1PkIhnkf9w_BH2gVipOBrI5nDKpLcU6IHVfaAZCyRTxc_qQphJRw3bBdQ8/exec';
+        // ==========================================
+        // ⚠️ ตั้งค่าตรงนี้ใหม่ด้วยนะครับ (เพราะเราลบไฟล์เดิมทิ้ง)
+        // ==========================================
+        const GAS_URL = 'ใส่_WEB_APP_URL_ของ_GAS_ที่นี่'; // วาง URL GAS ของคุณ
+        const LIFF_ID = 'ใส่_LIFF_ID_ที่นี่'; // วาง LIFF ID ของคุณ (เว้นว่างไว้ได้ถ้ารันบนเบราว์เซอร์ปกติ)
         
-        // State Management
+        let inventoryItems = [];
+        let cart = {};
         let currentUser = null;
         let userRole = 'User';
-        let inventoryItems = [];
-        let cart = {}; // { itemId: quantity }
 
-        // ================= INITIALIZATION =================
         window.onload = function() {
-            initializeLiff();
+            if(LIFF_ID && !LIFF_ID.includes('ใส่_')) {
+                initializeLiff();
+            } else {
+                mockLogin(); // สำหรับทดสอบบน Browser
+            }
         };
 
         async function initializeLiff() {
             try {
-                // สำหรับทดสอบบน Browser ให้ข้าม LIFF ไปก่อนได้ถ้าไม่มี LIFF_ID
-                if(!LIFF_ID || LIFF_ID === 'ใส่_LIFF_ID_ของคุณที่นี่') {
-                    console.warn("ไม่ได้ใส่ LIFF ID จำลองการเข้าระบบ");
-                    mockLogin();
-                    return;
-                }
-
                 await liff.init({ liffId: LIFF_ID });
-                
-                if (liff.isLoggedIn()) {
+                if (!liff.isLoggedIn()) {
+                    liff.login();
+                } else {
                     const profile = await liff.getProfile();
                     currentUser = {
                         userId: profile.userId,
@@ -185,254 +175,10 @@
                     };
                     updateProfileUI();
                     await authWithBackend();
-                } else {
-                    liff.login();
                 }
             } catch (err) {
-                console.error('LIFF Init Error', err);
-                showError('เกิดข้อผิดพลาดในการเชื่อมต่อ LINE');
-            }
-        }
-
-        async function mockLogin() {
-            currentUser = { userId: 'U12345', displayName: 'Mock User', pictureUrl: 'https://placehold.co/100x100/545859/FFD100?text=U' };
-            updateProfileUI();
-            await authWithBackend();
-        }
-
-        function updateProfileUI() {
-            document.getElementById('userInfo').classList.remove('hide');
-            document.getElementById('userName').textContent = currentUser.displayName;
-            document.getElementById('userImg').src = currentUser.pictureUrl;
-        }
-
-        async function authWithBackend() {
-            try {
-                const response = await fetch(GAS_URL, {
-                    method: 'POST',
-                    body: JSON.stringify({ action: 'login', user: currentUser })
-                });
-                const data = await response.json();
-                
-                if (data.status === 'success') {
-                    userRole = data.role;
-                    if (userRole === 'Admin') {
-                        document.getElementById('adminBtn').classList.remove('hide');
-                    }
-                    await loadItems();
-                } else {
-                    showError('ไม่สามารถเข้าสู่ระบบฐานข้อมูลได้');
-                }
-            } catch (error) {
-                showError('การเชื่อมต่อเซิร์ฟเวอร์ล้มเหลว');
-            }
-        }
-
-        async function loadItems() {
-            document.getElementById('loading').classList.remove('hide');
-            try {
-                const response = await fetch(`${GAS_URL}?action=getItems`);
-                const result = await response.json();
-                
-                if (result.status === 'success') {
-                    inventoryItems = result.data;
-                    renderUserDashboard();
-                    renderReportTable(); // สำหรับ Admin
-                    document.getElementById('loading').classList.add('hide');
-                    
-                    // สลับไปหน้า User เป็นค่าเริ่มต้น
-                    document.getElementById('userView').classList.remove('hide');
-                    if(Object.keys(cart).length > 0) document.getElementById('cartBar').classList.remove('hide');
-                }
-            } catch (error) {
-                document.getElementById('loading').classList.add('hide');
-                showError('ไม่สามารถโหลดข้อมูลพัสดุได้');
-            }
-        }
-
-        function renderUserDashboard() {
-            const container = document.getElementById('itemList');
-            container.innerHTML = '';
-
-            inventoryItems.forEach(item => {
-                const qtyInCart = cart[item.itemId] || 0;
-                const isOutOfStock = item.stockQuantity <= 0;
-
-                const card = document.createElement('div');
-                card.className = `bg-white rounded-2xl shadow p-3 flex flex-col ${isOutOfStock ? 'opacity-60 grayscale' : ''}`;
-                card.innerHTML = `
-                    <div class="aspect-square bg-gray-200 rounded-xl mb-2 overflow-hidden flex items-center justify-center">
-                        <img src="${item.imageUrl}" onerror="this.src='https://placehold.co/400x400/545859/FFD100?text=No+Image'" class="object-cover w-full h-full">
-                    </div>
-                    <div class="text-sm text-gray-500 mb-1">${item.category}</div>
-                    <div class="font-bold text-dark leading-tight mb-2 flex-1">${item.itemName}</div>
-                    <div class="flex justify-between items-center mt-auto">
-                        <span class="text-xs bg-gray-100 text-primary px-2 py-1 rounded">เหลือ: ${item.stockQuantity} ${item.unit}</span>
-                    </div>
-                    ${isOutOfStock ? 
-                        `<button disabled class="mt-3 w-full bg-gray-300 text-gray-500 py-2 rounded-lg font-bold text-sm cursor-not-allowed">หมด</button>` :
-                        `<div class="mt-3 flex items-center justify-between bg-gray-50 rounded-lg p-1 border border-gray-200">
-                            <button onclick="updateCart('${item.itemId}', -1)" class="w-8 h-8 rounded bg-white shadow flex items-center justify-center text-primary font-bold hover:bg-gray-100">-</button>
-                            <input type="number" id="qty-${item.itemId}" value="${qtyInCart}" 
-                                class="w-12 text-center font-bold bg-transparent outline-none border-none text-dark" 
-                                onchange="manualUpdateCart('${item.itemId}', this.value, ${item.stockQuantity})"
-                                onfocus="this.select()">
-                            <button onclick="updateCart('${item.itemId}', 1, ${item.stockQuantity})" class="w-8 h-8 rounded bg-primary text-highlight shadow flex items-center justify-center font-bold hover:bg-opacity-90">+</button>
-                        </div>`
-                    }
-                `;
-                container.appendChild(card);
-            });
-        }
-
-        function updateCart(itemId, change, maxStock = null) {
-            let currentQty = cart[itemId] || 0;
-            let newQty = currentQty + change;
-
-            if (newQty < 0) newQty = 0;
-            if (maxStock !== null && newQty > maxStock) {
-                Swal.fire('ข้อผิดพลาด', 'ไม่สามารถเบิกเกินจำนวนที่มีในคลังได้', 'warning');
-                return;
-            }
-
-            if (newQty === 0) {
-                delete cart[itemId];
-            } else {
-                cart[itemId] = newQty;
-            }
-
-            // Update UI
-            const qtyElement = document.getElementById(`qty-${itemId}`);
-            if (qtyElement) {
-                qtyElement.value = newQty;
-            }
-            updateCartSummary();
-        }
-
-        function manualUpdateCart(itemId, value, maxStock) {
-            let newQty = parseInt(value, 10);
-
-            // ป้องกันการกรอกตัวอักษรหรือค่าติดลบ
-            if (isNaN(newQty) || newQty < 0) {
-                newQty = 0;
-            }
-
-            // ป้องกันการเบิกเกินจำนวนที่มีในคลัง
-            if (newQty > maxStock) {
-                Swal.fire('ข้อผิดพลาด', `สามารถเบิกได้สูงสุด ${maxStock} เท่านั้น`, 'warning');
-                newQty = maxStock;
-            }
-
-            if (newQty === 0) {
-                delete cart[itemId];
-            } else {
-                cart[itemId] = newQty;
-            }
-
-            // อัปเดตช่อง input กลับเป็นตัวเลขที่ถูกต้อง
-            const qtyElement = document.getElementById(`qty-${itemId}`);
-            if (qtyElement) {
-                qtyElement.value = newQty;
-            }
-            updateCartSummary();
-        }
-
-        function updateCartSummary() {
-            const typesCount = Object.keys(cart).length;
-            document.getElementById('cartCount').textContent = typesCount;
-            
-            const cartBar = document.getElementById('cartBar');
-            if (typesCount > 0 && !document.getElementById('userView').classList.contains('hide')) {
-                cartBar.classList.remove('hide');
-            } else {
-                cartBar.classList.add('hide');
-            }
-        }
-
-        function showCartSummary() {
-            if (Object.keys(cart).length === 0) return;
-
-            let summaryHtml = '<div class="text-left max-h-60 overflow-y-auto">';
-            let itemsToCheckout = [];
-
-            for (let itemId in cart) {
-                const item = inventoryItems.find(i => i.itemId === itemId);
-                if (item) {
-                    summaryHtml += `
-                        <div class="flex justify-between border-b py-2 text-sm">
-                            <span>${item.itemName}</span>
-                            <span class="font-bold">${cart[itemId]} ${item.unit}</span>
-                        </div>`;
-                    itemsToCheckout.push({ itemId: itemId, quantity: cart[itemId] });
-                }
-            }
-            summaryHtml += '</div>';
-
-            Swal.fire({
-                title: 'ยืนยันการเบิกพัสดุ',
-                html: summaryHtml,
-                showCancelButton: true,
-                confirmButtonColor: 'rgb(84, 88, 89)',
-                cancelButtonColor: '#d33',
-                confirmButtonText: 'ยืนยันการเบิก',
-                cancelButtonText: 'ยกเลิก'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    processCheckout(itemsToCheckout);
-                }
-            });
-        }
-
-        // ⚠️ ค้นหาฟังก์ชันที่ใช้ยืนยันการเบิก แล้วแทนที่ด้วยโค้ดด้านล่างนี้
-        async function submitCheckout() { 
-            // 1. ตรวจสอบว่าตะกร้าว่างหรือไม่
-            if (Object.keys(cart).length === 0) {
-                Swal.fire('แจ้งเตือน', 'กรุณาเลือกพัสดุอย่างน้อย 1 รายการ', 'warning');
-                return;
-            }
-
-            // 2. แปลงรูปแบบข้อมูลตะกร้าให้เป็น Array ตามที่ Backend (GAS) ต้องการ!
-            // นี่คือจุดที่มักจะทำให้ Backend พังถ้าเราส่งผิดรูปแบบ
-            const cartArray = Object.keys(cart).map(itemId => {
-                return {
-                    itemId: itemId,
-                    quantity: parseInt(cart[itemId], 10)
-                };
-            });
-
-            // 3. เตรียมข้อมูล
-            const payload = {
-                action: 'checkout',
-                userId: currentUser.userId, // ⚠️ ตรงนี้เช็คให้แน่ใจว่าเป็นตัวแปรที่เก็บ User ID ของคุณ (เช่น profile.userId, currentUser.userId)
-                cart: cartArray
-            };
-
-            Swal.fire({ title: 'กำลังบันทึกข้อมูล...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-
-            try {
-                const response = await fetch(GAS_URL, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'text/plain;charset=utf-8' // 👈 สำคัญ: บังคับหลบ CORS
-                    },
-                    body: JSON.stringify(payload)
-                });
-
-                // 4. อ่านผลลัพธ์จาก Backend แบบละเอียด (ห้ามเช็คแค่ response.ok)
-                const result = await response.json();
-
-                if (result.status === 'success') {
-                    // ถ้า Backend บอกว่า success จริงๆ ค่อยโชว์
-                    Swal.fire('สำเร็จ!', 'บันทึกการเบิกพัสดุเรียบร้อยแล้ว', 'success').then(() => {
-                        cart = {}; // ล้างตะกร้า
-                        window.location.reload(); // รีเฟรชหน้าเพื่อให้สต็อกอัปเดตใหม่
-                    });
-                } else {
-                    // ❌ ถ้ามีปัญหา (เช่น สินค้าไม่พอ, หาสินค้าไม่เจอ) มันจะโชว์ Error จริงๆ ออกมาให้เราเห็นตรงนี้ครับ!
-                    Swal.fire('ระบบแจ้งเตือนข้อผิดพลาด', result.message, 'error');
-                }
-            } catch (error) {
-                Swal.fire('ปัญหาการเชื่อมต่อ', error.message, 'error');
+                console.error('LIFF Initialization failed', err);
+                mockLogin();
             }
         }
 
@@ -483,7 +229,6 @@
                     renderReportTable(); // สำหรับ Admin
                     document.getElementById('loading').classList.add('hide');
                     
-                    // สลับไปหน้า User เป็นค่าเริ่มต้น
                     document.getElementById('userView').classList.remove('hide');
                     if(Object.keys(cart).length > 0) document.getElementById('cartBar').classList.remove('hide');
                 }
@@ -544,7 +289,6 @@
                 cart[itemId] = newQty;
             }
 
-            // Update UI
             const qtyElement = document.getElementById(`qty-${itemId}`);
             if (qtyElement) {
                 qtyElement.value = newQty;
@@ -554,29 +298,19 @@
 
         function manualUpdateCart(itemId, value, maxStock) {
             let newQty = parseInt(value, 10);
+            if (isNaN(newQty) || newQty < 0) newQty = 0;
 
-            // ป้องกันการกรอกตัวอักษรหรือค่าติดลบ
-            if (isNaN(newQty) || newQty < 0) {
-                newQty = 0;
-            }
-
-            // ป้องกันการเบิกเกินจำนวนที่มีในคลัง
             if (newQty > maxStock) {
                 Swal.fire('ข้อผิดพลาด', `สามารถเบิกได้สูงสุด ${maxStock} เท่านั้น`, 'warning');
                 newQty = maxStock;
             }
 
-            if (newQty === 0) {
-                delete cart[itemId];
-            } else {
-                cart[itemId] = newQty;
-            }
+            if (newQty === 0) delete cart[itemId];
+            else cart[itemId] = newQty;
 
-            // อัปเดตช่อง input กลับเป็นตัวเลขที่ถูกต้อง
             const qtyElement = document.getElementById(`qty-${itemId}`);
-            if (qtyElement) {
-                qtyElement.value = newQty;
-            }
+            if (qtyElement) qtyElement.value = newQty;
+            
             updateCartSummary();
         }
 
@@ -626,34 +360,60 @@
             });
         }
 
+        // ==========================================
+        // 🔥 ฟังก์ชันดักจับแบบละเอียด (Debug Mode) ฉบับสมบูรณ์
+        // ==========================================
         async function processCheckout(itemsData) {
             document.getElementById('loading').classList.remove('hide');
+            
+            const payload = { 
+                action: 'checkout', 
+                userId: currentUser.userId,
+                cart: itemsData
+            };
+            
+            // [ดักจับ 1] พิมพ์ข้อมูลที่จะส่งไปให้ดูใน Console
+            console.log("🚀 [DEBUG] กำลังส่งข้อมูลไป GAS:", payload); 
+
             try {
                 const response = await fetch(GAS_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify({ 
-                        action: 'checkout', 
-                        userId: currentUser.userId,
-                        cart: itemsData
-                    })
+                    body: JSON.stringify(payload)
                 });
-                const result = await response.json();
+                
+                // [ดักจับ 2] ดูรหัสสถานะการส่ง
+                console.log("🌐 [DEBUG] รหัสการเชื่อมต่อ (HTTP Status):", response.status); 
+
+                const rawText = await response.text();
+                
+                // [ดักจับ 3] ดูข้อมูลดิบๆ ที่ GAS ตอบกลับมา (สำคัญมาก!)
+                console.log("📦 [DEBUG] ข้อมูลดิบที่ GAS ตอบกลับมา:\n", rawText); 
+
+                let result;
+                try {
+                    result = JSON.parse(rawText);
+                } catch(e) {
+                    console.error("❌ [DEBUG] พังตอนแปลง JSON ข้อผิดพลาดคือ:", e);
+                    throw new Error("ระบบฝั่ง GAS ตอบกลับมาผิดรูปแบบ (ลองดูที่ Console ข้อมูลดิบ)");
+                }
                 
                 document.getElementById('loading').classList.add('hide');
                 
                 if (result.status === 'success') {
-                    cart = {}; // Clear cart
+                    cart = {}; // ล้างตะกร้า
                     updateCartSummary();
                     Swal.fire('สำเร็จ!', 'บันทึกการเบิกพัสดุเรียบร้อยแล้ว', 'success').then(() => {
-                        loadItems(); // Reload data
+                        loadItems(); // โหลดข้อมูลใหม่
                     });
                 } else {
-                    Swal.fire('เกิดข้อผิดพลาด', result.message, 'error');
+                    console.error("❌ [DEBUG] GAS แจ้ง Error:", result.message);
+                    Swal.fire('เกิดข้อผิดพลาดจากฝั่งฐานข้อมูล', result.message, 'error');
                 }
             } catch (error) {
                 document.getElementById('loading').classList.add('hide');
-                Swal.fire('ผิดพลาด', 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้', 'error');
+                console.error("🔥 [DEBUG] เกิด Error ฝั่ง Frontend:", error);
+                Swal.fire('ผิดพลาด', 'ไม่สามารถเชื่อมต่อได้: ' + error.message, 'error');
             }
         }
 
@@ -663,22 +423,19 @@
             const cartBar = document.getElementById('cartBar');
 
             if (userView.classList.contains('hide')) {
-                // Switch to User
                 adminView.classList.add('hide');
                 userView.classList.remove('hide');
-                updateCartSummary(); // Show cart bar if needed
+                updateCartSummary(); 
             } else {
-                // Switch to Admin
                 userView.classList.add('hide');
                 cartBar.classList.add('hide');
                 adminView.classList.remove('hide');
-                fetchLowStock(); // Load low stock list automatically
+                fetchLowStock(); 
             }
         }
 
         async function handleAddStock(e) {
             e.preventDefault();
-            
             const payload = {
                 action: 'addStock',
                 item: {
@@ -690,7 +447,6 @@
                     adminId: currentUser.userId
                 }
             };
-
             document.getElementById('loading').classList.remove('hide');
             try {
                 const response = await fetch(GAS_URL, {
@@ -700,11 +456,10 @@
                 });
                 const result = await response.json();
                 document.getElementById('loading').classList.add('hide');
-
                 if (result.status === 'success') {
                     Swal.fire('สำเร็จ', 'บันทึกการนำเข้าพัสดุเรียบร้อย', 'success');
                     document.getElementById('addStockForm').reset();
-                    loadItems(); // Refresh data
+                    loadItems();
                 } else {
                     Swal.fire('ผิดพลาด', result.message, 'error');
                 }
@@ -717,11 +472,9 @@
         async function fetchLowStock() {
             const listDiv = document.getElementById('lowStockList');
             listDiv.innerHTML = '<p class="text-center text-sm text-gray-500">กำลังโหลด...</p>';
-            
             try {
                 const response = await fetch(`${GAS_URL}?action=getLowStock`);
                 const result = await response.json();
-                
                 if (result.status === 'success' && result.data.length > 0) {
                     listDiv.innerHTML = result.data.map(item => `
                         <div class="flex justify-between border-b py-2 items-center">
