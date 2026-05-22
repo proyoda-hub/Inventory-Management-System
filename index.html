@@ -152,7 +152,7 @@
             <!-- Low Stock -->
             <div class="space-y-6">
                 <div class="bg-red-50 border border-red-200 p-5 rounded-2xl shadow">
-                    <h3 class="font-bold text-lg mb-3 text-red-700 flex items-center gap-2">⚠️ แจ้งเตือนพัสดุใกล้หมด ⚠️</h3>
+                    <h3 class="font-bold text-lg mb-3 text-red-700 flex items-center gap-2">⚠️ แจ้งเตือนพัสดุใกล้หมด</h3>
                     <div id="lowStockList" class="space-y-2 max-h-[400px] overflow-y-auto pr-2 scrollbar-hide">
                         <!-- Low stock items will show here -->
                     </div>
@@ -160,11 +160,10 @@
             </div>
         </div>
 
-        <!-- 🌟 ส่วนใหม่: ระบบออกรายงานแบบเต็มรูปแบบ (ด้านล่างสุด) -->
+        <!-- ระบบออกรายงาน -->
         <div class="bg-white p-5 rounded-2xl shadow mt-6">
             <h3 class="font-bold text-lg mb-4 text-dark flex items-center gap-2">📊 ระบบออกรายงาน (Report)</h3>
             
-            <!-- ตัวกรองการออกรายงาน -->
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 bg-gray-50 p-4 rounded-xl border border-gray-200">
                 <div>
                     <label class="text-sm text-gray-600 block mb-1 font-bold">ประเภทรายงาน</label>
@@ -175,16 +174,13 @@
                     </select>
                 </div>
                 
-                <!-- ตัวกรอง User -->
                 <div id="filterUserContainer" class="hide">
                     <label class="text-sm text-gray-600 block mb-1 font-bold">เลือกผู้ใช้งาน</label>
                     <select id="reportUser" class="w-full border border-gray-300 p-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-highlight text-sm">
                         <option value="all">ทุกคน</option>
-                        <!-- รายชื่อจะถูกเติมอัตโนมัติ -->
                     </select>
                 </div>
 
-                <!-- ตัวกรอง Date -->
                 <div id="filterDateContainer" class="hide md:col-span-2 grid grid-cols-2 gap-2">
                     <div>
                         <label class="text-sm text-gray-600 block mb-1 font-bold">ตั้งแต่วันที่</label>
@@ -201,7 +197,7 @@
                 </div>
             </div>
 
-            <!-- ส่วนแสดงผลก่อนดาวน์โหลด (Report Preview) -->
+            <!-- Report Preview -->
             <div id="reportPreviewContainer" class="hide flex flex-col items-center">
                 <div class="w-full max-w-[190mm] flex justify-end mb-3">
                     <button onclick="exportCurrentReportToPDF()" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg flex items-center justify-center gap-2 hover:bg-blue-700 transition shadow">
@@ -210,14 +206,12 @@
                 </div>
                 
                 <div class="w-full overflow-x-auto border-4 border-gray-200 rounded-lg bg-gray-200 p-4 shadow-inner">
-                    <!-- กระดาษจำลอง A4 -->
                     <div id="reportPaper" class="p-8 bg-white text-black mx-auto shadow-sm" style="width: 190mm; min-height: 297mm;">
                         <h1 id="reportTitle" class="text-2xl font-bold text-center mb-2">รายงานสรุปยอดพัสดุคงเหลือ</h1>
                         <p id="reportSubtitle" class="text-center text-gray-600 mb-6 text-sm"></p>
                         
                         <table class="w-full text-left border-collapse border border-gray-300 table-fixed break-words">
                             <thead id="reportTableHeader" class="bg-gray-100">
-                                <!-- ส่วนหัวตารางจะถูกเปลี่ยนอัตโนมัติตามประเภทรายงาน -->
                             </thead>
                             <tbody id="reportTableBody"></tbody>
                         </table>
@@ -236,7 +230,7 @@
         // ==========================================
         
         let inventoryItems = [];
-        let transactionItems = []; // 🌟 เก็บประวัติการเบิก
+        let transactionItems = []; 
         let cart = {};
         let currentUser = null;
         let userRole = 'User';
@@ -284,6 +278,7 @@
             document.getElementById('userImg').src = currentUser.pictureUrl;
         }
 
+        // 🌟 อัปเดตส่วนตรวจสอบการเข้าสู่ระบบ
         async function authWithBackend() {
             try {
                 const response = await fetch(GAS_URL, {
@@ -297,13 +292,24 @@
                     userRole = data.role;
                     if (userRole === 'Admin') {
                         document.getElementById('adminBtn').classList.remove('hide');
-                        fetchTransactions(); // 🌟 ถ้าเป็น Admin ให้ดึงประวัติรอไว้เลย
+                        fetchTransactions(); 
                     }
                     await loadItems();
                 } else {
-                    showError('ไม่สามารถเข้าสู่ระบบฐานข้อมูลได้');
+                    // หากโดนบล็อก หรือรออนุมัติ จะล็อกหน้าจอด้วย SweetAlert ทันที
+                    document.getElementById('loading').classList.add('hide');
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'ไม่อนุญาตให้เข้าใช้งาน',
+                        html: `<p class="text-gray-600">${data.message}</p>`,
+                        confirmButtonColor: '#545859',
+                        allowOutsideClick: false,
+                        allowEscapeKey: false,
+                        showConfirmButton: false // ซ่อนปุ่มเพื่อป้องกันการกดทะลุเข้าไป
+                    });
                 }
             } catch (error) {
+                document.getElementById('loading').classList.add('hide');
                 showError('การเชื่อมต่อเซิร์ฟเวอร์ล้มเหลว');
             }
         }
@@ -335,14 +341,13 @@
             }
         }
 
-        // 🌟 ดึงประวัติธุรกรรมเพื่อเอามาทำรายงาน
         async function fetchTransactions() {
             try {
                 const response = await fetch(`${GAS_URL}?action=getTransactions`);
                 const result = await response.json();
                 if (result.status === 'success') {
                     transactionItems = result.data;
-                    populateUserFilter(); // เติมรายชื่อคนเบิกใส่ Dropdown ค้นหา
+                    populateUserFilter(); 
                 }
             } catch (error) {
                 console.error("ดึงข้อมูลประวัติไม่สำเร็จ", error);
@@ -350,13 +355,12 @@
         }
 
         // ==========================================
-        // 🌟 ระบบ Report Builder (แบบเลือกกรองได้)
+        // 🌟 ระบบ Report Builder
         // ==========================================
         function populateUserFilter() {
             const userSelect = document.getElementById('reportUser');
             if(!userSelect) return;
             
-            // กรองเอาเฉพาะ User ที่เคยเบิกแบบไม่ซ้ำกัน
             let users = [];
             let seen = new Set();
             for(let t of transactionItems) {
@@ -365,7 +369,6 @@
                     users.push({id: t.userId, name: t.userName});
                 }
             }
-            // เรียงตามตัวอักษร
             users.sort((a,b) => a.name.localeCompare(b.name));
             
             userSelect.innerHTML = `<option value="all">ทุกคน</option>` +
@@ -421,7 +424,6 @@
             } else if (type === 'user' || type === 'date') {
                 title.textContent = type === 'user' ? 'รายงานประวัติการเบิกพัสดุ (รายบุคคล)' : 'รายงานประวัติการเบิกพัสดุ (ตามช่วงเวลา)';
 
-                // กรองเฉพาะการเบิกที่สำเร็จ
                 let filteredTxns = transactionItems.filter(t => t.type === 'เบิก' && t.status === 'สำเร็จ');
 
                 if (type === 'user') {
@@ -461,7 +463,6 @@
                 if (filteredTxns.length === 0) {
                     tbody.innerHTML = `<tr><td colspan="4" class="p-6 text-center text-gray-500 font-bold">ไม่พบประวัติการเบิกในเงื่อนไขที่เลือก</td></tr>`;
                 } else {
-                    // เรียงวันที่ใหม่สุดขึ้นก่อน
                     filteredTxns.sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
                     tbody.innerHTML = filteredTxns.map(t => {
                         return `<tr class="border-b border-gray-200">
@@ -474,7 +475,6 @@
                 }
             }
             
-            // เลื่อนจอลงมาให้เห็นรายงาน
             document.getElementById('reportPreviewContainer').classList.remove('hide');
             document.getElementById('reportPreviewContainer').scrollIntoView({ behavior: 'smooth' });
         }
@@ -716,7 +716,7 @@
                 if (result.status === 'success') {
                     cart = {}; updateCartSummary();
                     Swal.fire('สำเร็จ!', 'บันทึกการเบิกพัสดุเรียบร้อยแล้วระบบได้แจ้งเตือนไปที่ LINE ของคุณ', 'success').then(() => {
-                        fetchTransactions(); // อัปเดตประวัติการเบิกใหม่หลังเบิกเสร็จ
+                        fetchTransactions(); 
                         loadItems();
                     });
                 } else {
@@ -742,7 +742,7 @@
                 cartBar.classList.add('hide');
                 adminView.classList.remove('hide');
                 fetchLowStock(); 
-                fetchTransactions(); // ดึงประวัติอีกรอบตอนเข้า Admin
+                fetchTransactions(); 
             }
         }
 
