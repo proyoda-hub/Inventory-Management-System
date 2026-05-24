@@ -297,6 +297,13 @@
         let dashPieChart = null;
 
         window.onload = function() {
+            // ป้องกัน Error LIFF Initialization ในหน้าจอ Preview (Canvas / Blob URLs)
+            if (window.location.protocol === 'blob:' || window.location.protocol === 'data:') {
+                console.warn('ใช้งานในโหมด Preview ระบบจะจำลองผู้ใช้งาน (Mock Login) อัตโนมัติ');
+                mockLogin();
+                return;
+            }
+
             if(LIFF_ID && !LIFF_ID.includes('ใส่_')) {
                 initializeLiff();
             } else {
@@ -715,6 +722,22 @@
             window.scrollTo({ top: 0, behavior: 'smooth' }); 
         }
 
+        // 🌟 ฟังก์ชันใหม่: สลับไปหน้า Admin และเติมข้อมูลเตรียมนำเข้าทันที
+        function goToAddStock(itemId) {
+            if (userRole !== 'Admin') return; // ป้องกัน User ทั่วไปกด
+
+            const userView = document.getElementById('userView');
+            // หากตอนนี้อยู่หน้า User ให้สลับไปหน้า Admin ก่อน
+            if (!userView.classList.contains('hide')) {
+                toggleAdminMode();
+            }
+
+            // หน่วงเวลาเล็กน้อยเพื่อให้หน้าจอเปลี่ยนเสร็จ แล้วค่อยเรียกฟังก์ชันเติมข้อมูลและเลื่อนจอ
+            setTimeout(() => {
+                fillStockFromLowStock(itemId);
+            }, 150);
+        }
+
         function autoFillItemInfo(trigger) {
             let selectedItem = null;
             const itemIdInput = document.getElementById('add_itemId').value.trim();
@@ -788,7 +811,27 @@
 
             filteredItems.forEach(item => {
                 const qtyInCart = cart[item.itemId] || 0;
+                
+                // 🌟 เช็คสถานะคงเหลือ
                 const isOutOfStock = item.stockQuantity <= 0;
+                const isLowStock = !isOutOfStock && item.stockQuantity <= item.minimumStock;
+
+                // 🌟 กำหนดสีป้ายตามสถานะ
+                let badgeClass = 'bg-green-50 border-green-200 text-green-700'; // สีเขียวอ่อน ปกติ
+                if (isOutOfStock) {
+                    badgeClass = 'bg-gray-100 border-gray-200 text-gray-500'; // สีเทา หมด
+                } else if (isLowStock) {
+                    badgeClass = 'bg-yellow-50 border-yellow-300 text-yellow-700'; // สีเหลืองอ่อน ใกล้หมด
+                }
+
+                // 🌟 ตรวจสอบสิทธิ์ว่าเป็น Admin หรือไม่ เพื่อเปิดใช้งานการกดปุ่ม
+                let adminClickAttr = '';
+                let adminHoverClass = '';
+                if (userRole === 'Admin') {
+                    adminClickAttr = `onclick="goToAddStock('${item.itemId}')" title="คลิกเพื่อนำเข้าพัสดุ"`;
+                    adminHoverClass = 'cursor-pointer hover:shadow-md hover:scale-105 transform transition';
+                }
+
                 const card = document.createElement('div');
                 card.className = `bg-white rounded-2xl shadow p-3 flex flex-col transition-opacity ${isOutOfStock ? 'opacity-60 grayscale' : ''}`;
                 card.innerHTML = `
@@ -801,7 +844,7 @@
                     <div class="text-[10px] text-gray-400 font-mono">${item.itemId}</div>
                     <div class="font-bold text-dark leading-tight mb-2 flex-1 text-sm">${item.itemName}</div>
                     <div class="flex justify-between items-center mt-auto">
-                        <span class="text-xs bg-gray-100 border border-gray-200 text-primary px-2 py-1 rounded font-semibold">
+                        <span ${adminClickAttr} class="text-xs border px-2 py-1 rounded font-bold ${badgeClass} ${adminHoverClass}">
                             เหลือ: ${item.stockQuantity} ${item.unit}
                         </span>
                     </div>
@@ -820,7 +863,7 @@
                 container.appendChild(card);
             });
         }
-
+        
         function updateCart(itemId, change, maxStock = null) {
             let currentQty = cart[itemId] || 0;
             let newQty = currentQty + change;
