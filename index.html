@@ -7,7 +7,6 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    <!-- 🌟 เพิ่ม Library สำหรับสร้างกราฟ (Chart.js) -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
     <script>
@@ -36,9 +35,15 @@
 
         .scrollbar-hide::-webkit-scrollbar { display: none; }
         .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        /* สไตล์สำหรับกล่อง SweetAlert เวลาแสดงรูป */
+        .swal-image-modal { padding: 1em !important; border-radius: 1.5rem !important; }
     </style>
 </head>
 <body class="text-dark bg-gray-100 min-h-screen pb-20">
+
+    <!-- ซ่อน Input File ไว้สำหรับเรียกใช้งานกล้อง/แกลลอรี่ -->
+    <input type="file" id="imageUploader" accept="image/*" class="hide" onchange="processImageSelection(event)">
 
     <!-- Navbar -->
     <nav class="bg-dark text-highlight p-4 shadow-md sticky top-0 z-50 flex justify-between items-center">
@@ -53,9 +58,9 @@
     </nav>
 
     <!-- Loading Overlay -->
-    <div id="loading" class="fixed inset-0 bg-dark/80 flex flex-col justify-center items-center z-[100] text-highlight">
+    <div id="loading" class="fixed inset-0 bg-dark/80 flex flex-col justify-center items-center z-[100] text-highlight hide">
         <div class="animate-spin rounded-full h-12 w-12 border-b-4 border-highlight mb-4"></div>
-        <p class="font-bold">กำลังโหลดข้อมูล...</p>
+        <p id="loadingText" class="font-bold">กำลังโหลดข้อมูล...</p>
     </div>
 
     <!-- User View (Dashboard) -->
@@ -94,22 +99,18 @@
             <button onclick="toggleAdminMode()" class="bg-gray-200 text-dark px-4 py-1.5 rounded-lg font-bold shadow hover:bg-gray-300 transition">กลับหน้าแรก</button>
         </div>
 
-        <!-- 🌟 ส่วนใหม่: Interactive Dashboard -->
+        <!-- Interactive Dashboard -->
         <div class="bg-white p-5 rounded-2xl shadow mb-6">
             <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 border-b border-gray-200 pb-3 gap-3">
                 <h3 class="font-bold text-lg text-dark flex items-center gap-2">📈 ภาพรวมคลังพัสดุ (Dashboard)</h3>
-                
-                <!-- ตัวกรองหมวดหมู่สำหรับ Dashboard -->
                 <div class="flex items-center gap-2 w-full md:w-auto">
                     <label class="text-sm text-gray-500 font-bold whitespace-nowrap">ตัวกรอง:</label>
                     <select id="dashCategoryFilter" onchange="renderDashboard(this.value)" class="w-full md:w-auto border border-gray-300 p-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-highlight text-sm font-semibold bg-gray-50">
                         <option value="all">ทุกหมวดหมู่</option>
-                        <!-- จะถูกสร้างอัตโนมัติ -->
                     </select>
                 </div>
             </div>
 
-            <!-- KPI Cards -->
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                 <div class="bg-blue-50 p-4 rounded-xl border border-blue-100 flex flex-col justify-center items-center shadow-sm">
                     <span class="text-blue-600 text-xs font-bold uppercase tracking-wider mb-1">รายการพัสดุทั้งหมด</span>
@@ -129,15 +130,12 @@
                 </div>
             </div>
 
-            <!-- Charts (กราฟ) -->
             <div class="grid md:grid-cols-2 gap-6">
-                <!-- กราฟแท่ง Top 5 -->
                 <div class="border border-gray-200 rounded-xl p-4 shadow-sm bg-gray-50">
                     <div class="h-[280px] relative">
                         <canvas id="barChart"></canvas>
                     </div>
                 </div>
-                <!-- กราฟโดนัท สัดส่วนหมวดหมู่ -->
                 <div class="border border-gray-200 rounded-xl p-4 shadow-sm bg-gray-50">
                     <div class="h-[280px] relative flex justify-center">
                         <canvas id="pieChart"></canvas>
@@ -145,7 +143,6 @@
                 </div>
             </div>
         </div>
-        <!-- 🌟 สิ้นสุดส่วน Dashboard -->
 
         <div class="grid md:grid-cols-2 gap-6">
             <!-- Add Stock Form -->
@@ -209,7 +206,6 @@
                 <div class="bg-red-50 border border-red-200 p-5 rounded-2xl shadow">
                     <h3 class="font-bold text-lg mb-3 text-red-700 flex items-center gap-2">⚠️ แจ้งเตือนพัสดุใกล้หมด ⚠️</h3>
                     <div id="lowStockList" class="space-y-2 max-h-[400px] overflow-y-auto pr-2 scrollbar-hide">
-                        <!-- Low stock items will show here -->
                     </div>
                 </div>
             </div>
@@ -292,18 +288,28 @@
         let currentCategory = 'ทั้งหมด';
         let searchQuery = '';
 
-        // ตัวแปรสำหรับกราฟ Dashboard
         let dashBarChart = null;
         let dashPieChart = null;
 
+        // ตัวแปรสำหรับจัดการอัปโหลดภาพ
+        let currentEditingItemId = null;
+
+        function showLoading(text = 'กำลังโหลดข้อมูล...') {
+            document.getElementById('loadingText').textContent = text;
+            document.getElementById('loading').classList.remove('hide');
+        }
+
+        function hideLoading() {
+            document.getElementById('loading').classList.add('hide');
+        }
+
         window.onload = function() {
-            // ป้องกัน Error LIFF Initialization ในหน้าจอ Preview (Canvas / Blob URLs)
+            showLoading();
             if (window.location.protocol === 'blob:' || window.location.protocol === 'data:') {
                 console.warn('ใช้งานในโหมด Preview ระบบจะจำลองผู้ใช้งาน (Mock Login) อัตโนมัติ');
                 mockLogin();
                 return;
             }
-
             if(LIFF_ID && !LIFF_ID.includes('ใส่_')) {
                 initializeLiff();
             } else {
@@ -361,25 +367,20 @@
                     }
                     await loadItems();
                 } else {
-                    document.getElementById('loading').classList.add('hide');
+                    hideLoading();
                     Swal.fire({
-                        icon: 'error',
-                        title: 'ไม่อนุญาตให้เข้าใช้งาน',
+                        icon: 'error', title: 'ไม่อนุญาตให้เข้าใช้งาน',
                         html: `<p class="text-gray-600">${data.message}</p>`,
-                        confirmButtonColor: '#545859',
-                        allowOutsideClick: false,
-                        allowEscapeKey: false,
-                        showConfirmButton: false
+                        confirmButtonColor: '#545859', allowOutsideClick: false, allowEscapeKey: false, showConfirmButton: false
                     });
                 }
             } catch (error) {
-                document.getElementById('loading').classList.add('hide');
+                hideLoading();
                 showError('การเชื่อมต่อเซิร์ฟเวอร์ล้มเหลว');
             }
         }
 
         async function loadItems() {
-            document.getElementById('loading').classList.remove('hide');
             try {
                 const response = await fetch(`${GAS_URL}?action=getItems`);
                 const result = await response.json();
@@ -389,7 +390,7 @@
                     renderCategoryTabs();
                     renderItems();
                     
-                    document.getElementById('loading').classList.add('hide');
+                    hideLoading();
                     
                     const adminView = document.getElementById('adminView');
                     if (adminView.classList.contains('hide')) {
@@ -397,15 +398,220 @@
                         if(Object.keys(cart).length > 0) document.getElementById('cartBar').classList.remove('hide');
                     } else {
                         fetchLowStock();
-                        // อัปเดต Dashboard เมื่อมีการโหลดข้อมูลใหม่
                         renderDashboard(document.getElementById('dashCategoryFilter') ? document.getElementById('dashCategoryFilter').value : 'all');
                     }
                 }
             } catch (error) {
-                document.getElementById('loading').classList.add('hide');
+                hideLoading();
                 showError('ไม่สามารถโหลดข้อมูลพัสดุได้');
             }
         }
+
+        // ==========================================
+        // 🌟 ระบบจัดการรูปภาพ (Lightbox & Upload)
+        // ==========================================
+        
+        // 1. เปิดกล่องแสดงรูปภาพใหญ่
+        window.openImageLightbox = function(itemId) {
+            const item = inventoryItems.find(i => String(i.itemId) === String(itemId));
+            if (!item) return;
+
+            // HTML สำหรับปุ่ม Admin (กล้องถ่ายรูป, เลือกแกลลอรี่, ลบภาพ)
+            let adminControls = '';
+            if (userRole === 'Admin') {
+                adminControls = `
+                    <div class="flex justify-center gap-4 mt-6 pt-4 border-t border-gray-200">
+                        <button onclick="triggerImageUpload('${item.itemId}', 'camera')" class="flex flex-col items-center gap-1 text-blue-600 hover:text-blue-800 transition transform hover:scale-110">
+                            <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center shadow">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                            </div>
+                            <span class="text-xs font-bold mt-1">ถ่ายรูป</span>
+                        </button>
+                        <button onclick="triggerImageUpload('${item.itemId}', 'gallery')" class="flex flex-col items-center gap-1 text-green-600 hover:text-green-800 transition transform hover:scale-110">
+                            <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center shadow">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                            </div>
+                            <span class="text-xs font-bold mt-1">แกลลอรี่</span>
+                        </button>
+                        <button onclick="deleteItemImage('${item.itemId}')" class="flex flex-col items-center gap-1 text-red-600 hover:text-red-800 transition transform hover:scale-110">
+                            <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center shadow">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                            </div>
+                            <span class="text-xs font-bold mt-1">ลบรูป</span>
+                        </button>
+                    </div>
+                `;
+            }
+
+            const imgUrl = item.imageUrl || 'https://placehold.co/600x600/545859/FFD100?text=No+Image';
+
+            Swal.fire({
+                title: `<span class="text-lg font-bold">${item.itemName}</span>`,
+                html: `
+                    <div class="text-xs text-gray-500 font-mono mb-3">รหัส: ${item.itemId}</div>
+                    <div class="bg-gray-100 rounded-xl overflow-hidden shadow-inner flex items-center justify-center min-h-[250px]">
+                        <img src="${imgUrl}" class="w-full object-contain max-h-[60vh] mx-auto rounded-xl">
+                    </div>
+                    ${adminControls}
+                `,
+                showCloseButton: true,
+                showConfirmButton: false,
+                customClass: { popup: 'swal-image-modal' }
+            });
+        }
+
+        // 2. ฟังก์ชันเรียกใช้งาน Input File
+        window.triggerImageUpload = function(itemId, source) {
+            currentEditingItemId = itemId;
+            const uploader = document.getElementById('imageUploader');
+            
+            // ถ้าเลือกกล้อง ให้เพิ่ม attribute บังคับเปิดกล้อง
+            if (source === 'camera') {
+                uploader.setAttribute('capture', 'environment');
+            } else {
+                uploader.removeAttribute('capture');
+            }
+            
+            uploader.click();
+        }
+
+        // 3. จัดการไฟล์ที่เลือก และบีบอัดภาพ (ป้องกันแอปค้างเวลาอัปโหลดภาพใหญ่)
+        window.processImageSelection = function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            // ถามยืนยันก่อนอัปโหลด
+            Swal.fire({
+                title: 'ยืนยันเปลี่ยนรูปภาพ?',
+                text: "รูปภาพเก่าจะถูกลบและแทนที่ด้วยรูปนี้",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#3B82F6',
+                cancelButtonColor: '#545859',
+                confirmButtonText: 'ตกลง (อัปโหลด)',
+                cancelButtonText: 'ยกเลิก'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    showLoading('กำลังบีบอัดและอัปโหลดรูปภาพ...');
+                    
+                    // บีบอัดรูปภาพด้วย HTML Canvas ก่อนส่งให้ GAS
+                    const reader = new FileReader();
+                    reader.readAsDataURL(file);
+                    reader.onload = function(e) {
+                        const img = new Image();
+                        img.src = e.target.result;
+                        img.onload = function() {
+                            const canvas = document.createElement('canvas');
+                            const ctx = canvas.getContext('2d');
+                            
+                            // จำกัดขนาดความกว้าง/สูง สูงสุด 800px เพื่อความรวดเร็ว
+                            const MAX_SIZE = 800;
+                            let width = img.width;
+                            let height = img.height;
+
+                            if (width > height && width > MAX_SIZE) {
+                                height *= MAX_SIZE / width; width = MAX_SIZE;
+                            } else if (height > MAX_SIZE) {
+                                width *= MAX_SIZE / height; height = MAX_SIZE;
+                            }
+
+                            canvas.width = width;
+                            canvas.height = height;
+                            ctx.drawImage(img, 0, 0, width, height);
+
+                            // แปลงกลับเป็น Base64 แบบบีบอัด (JPEG quality 0.7)
+                            const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+                            uploadImageToGAS(compressedBase64, 'image/jpeg');
+                        }
+                    }
+                } else {
+                    document.getElementById('imageUploader').value = ''; // Reset input
+                }
+            });
+        }
+
+        // 4. ส่งภาพไปให้ GAS
+        async function uploadImageToGAS(base64Data, mimeType) {
+            const payload = {
+                action: 'uploadImage',
+                itemId: currentEditingItemId,
+                base64: base64Data,
+                mimeType: mimeType
+            };
+
+            try {
+                const response = await fetch(GAS_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    // อัปเดตข้อมูลใน UI ทันที
+                    const itemIndex = inventoryItems.findIndex(i => String(i.itemId) === String(currentEditingItemId));
+                    if(itemIndex > -1) inventoryItems[itemIndex].imageUrl = result.imageUrl;
+                    
+                    renderItems();
+                    document.getElementById('imageUploader').value = ''; 
+                    
+                    Swal.fire({ icon: 'success', title: 'สำเร็จ', text: 'บันทึกรูปภาพเรียบร้อย', timer: 1500, showConfirmButton: false });
+                } else {
+                    hideLoading();
+                    Swal.fire('ผิดพลาด', 'อัปโหลดไม่สำเร็จ: ' + result.message, 'error');
+                }
+            } catch (err) {
+                hideLoading();
+                Swal.fire('ผิดพลาด', 'เชื่อมต่อล้มเหลว', 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // 5. ลบรูปภาพ
+        window.deleteItemImage = function(itemId) {
+            Swal.fire({
+                title: 'ยืนยันลบรูปภาพ?',
+                text: "รูปภาพนี้จะถูกลบออกจาก Google Drive ถาวร",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#EF4444',
+                cancelButtonColor: '#545859',
+                confirmButtonText: 'ลบรูปภาพ',
+                cancelButtonText: 'ยกเลิก'
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    showLoading('กำลังลบรูปภาพ...');
+                    try {
+                        const response = await fetch(GAS_URL, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                            body: JSON.stringify({ action: 'deleteImage', itemId: itemId })
+                        });
+                        const res = await response.json();
+                        
+                        if (res.status === 'success') {
+                            const itemIndex = inventoryItems.findIndex(i => String(i.itemId) === String(itemId));
+                            if(itemIndex > -1) inventoryItems[itemIndex].imageUrl = '';
+                            renderItems();
+                            Swal.fire({ icon: 'success', title: 'ลบสำเร็จ', timer: 1500, showConfirmButton: false });
+                        } else {
+                            hideLoading();
+                            Swal.fire('ผิดพลาด', 'ลบไม่สำเร็จ: ' + res.message, 'error');
+                        }
+                    } catch (err) {
+                        hideLoading();
+                        Swal.fire('ผิดพลาด', 'เชื่อมต่อล้มเหลว', 'error');
+                    } finally {
+                        hideLoading();
+                    }
+                }
+            });
+        }
+
+        // ==========================================
+        // ฟังก์ชันอื่นๆ (Dashboard, Reporting, etc.) คงเดิม...
+        // ==========================================
 
         async function fetchTransactions() {
             try {
@@ -420,33 +626,26 @@
             }
         }
 
-        // ==========================================
-        // 🌟 Interactive Dashboard (สร้างและอัปเดตกราฟ)
-        // ==========================================
         function renderDashboard(filterCat = 'all') {
             const dashFilter = document.getElementById('dashCategoryFilter');
             const uniqueCats = [...new Set(inventoryItems.map(i => i.category || 'ทั่วไป'))];
             
-            // อัปเดตรายชื่อหมวดหมู่ใน Dropdown ถ้ายังไม่มี
             if (dashFilter.options.length <= 1) {
                 dashFilter.innerHTML = '<option value="all">ทุกหมวดหมู่</option>' + 
                     uniqueCats.map(c => `<option value="${c}">${c}</option>`).join('');
                 dashFilter.value = filterCat;
             }
 
-            // กรองข้อมูลตามที่เลือก
             let data = inventoryItems;
             if (filterCat !== 'all') {
                 data = inventoryItems.filter(i => (i.category || 'ทั่วไป') === filterCat);
             }
 
-            // อัปเดต KPI Cards
             document.getElementById('kpiTotalItems').textContent = data.length.toLocaleString();
             document.getElementById('kpiTotalStock').textContent = data.reduce((sum, item) => sum + item.stockQuantity, 0).toLocaleString();
             document.getElementById('kpiLowStock').textContent = data.filter(i => i.stockQuantity <= i.minimumStock).length.toLocaleString();
             document.getElementById('kpiCategories').textContent = filterCat === 'all' ? uniqueCats.length : 1;
 
-            // 📊 1. กราฟแท่ง (Bar Chart) - Top 5 สินค้าที่มีสต็อกเยอะที่สุด
             const topItems = [...data].sort((a, b) => b.stockQuantity - a.stockQuantity).slice(0, 5);
             const barLabels = topItems.map(i => i.itemName.length > 15 ? i.itemName.substring(0, 15) + '...' : i.itemName);
             const barData = topItems.map(i => i.stockQuantity);
@@ -460,32 +659,22 @@
                     datasets: [{
                         label: 'จำนวนคงเหลือ',
                         data: barData,
-                        backgroundColor: 'rgba(84, 88, 89, 0.85)', // สี Primary (เทา)
-                        hoverBackgroundColor: 'rgba(255, 209, 0, 0.9)', // สี Highlight (เหลือง)
+                        backgroundColor: 'rgba(84, 88, 89, 0.85)',
+                        hoverBackgroundColor: 'rgba(255, 209, 0, 0.9)',
                         borderRadius: 4
                     }]
                 },
                 options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false },
-                        title: { display: true, text: 'พัสดุคงเหลือเยอะที่สุด (Top 5)', font: { family: 'Inter', size: 14 } },
-                        tooltip: { titleFont: { family: 'Inter' }, bodyFont: { family: 'Inter' } }
-                    },
-                    scales: {
-                        x: { ticks: { font: { family: 'Inter' } } },
-                        y: { ticks: { font: { family: 'Inter' } }, beginAtZero: true }
-                    }
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false }, title: { display: true, text: 'พัสดุคงเหลือเยอะที่สุด (Top 5)', font: { family: 'Inter', size: 14 } }, tooltip: { titleFont: { family: 'Inter' }, bodyFont: { family: 'Inter' } } },
+                    scales: { x: { ticks: { font: { family: 'Inter' } } }, y: { ticks: { font: { family: 'Inter' } }, beginAtZero: true } }
                 }
             });
 
-            // 🍩 2. กราฟโดนัท (Doughnut Chart) - สัดส่วนหมวดหมู่
             let pieLabels = [];
             let pieData = [];
 
             if (filterCat === 'all') {
-                // หาผลรวมตามหมวดหมู่
                 const catMap = {};
                 data.forEach(i => {
                     const c = i.category || 'ทั่วไป';
@@ -494,7 +683,6 @@
                 pieLabels = Object.keys(catMap);
                 pieData = Object.values(catMap);
             } else {
-                // หากเลือกหมวดหมู่ใดหมวดหมู่หนึ่ง ให้แสดงสัดส่วนของแต่ละรายการในหมวดหมู่นั้นแทน
                 pieLabels = data.map(i => i.itemName.length > 20 ? i.itemName.substring(0, 20) + '...' : i.itemName);
                 pieData = data.map(i => i.stockQuantity);
             }
@@ -507,33 +695,21 @@
                     labels: pieLabels,
                     datasets: [{
                         data: pieData,
-                        backgroundColor: [
-                            '#FFD100', '#545859', '#3B82F6', '#10B981', '#EF4444', '#8B5CF6', '#F59E0B', '#14B8A6'
-                        ],
-                        borderWidth: 2,
-                        borderColor: '#ffffff'
+                        backgroundColor: ['#FFD100', '#545859', '#3B82F6', '#10B981', '#EF4444', '#8B5CF6', '#F59E0B', '#14B8A6'],
+                        borderWidth: 2, borderColor: '#ffffff'
                     }]
                 },
                 options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { position: 'right', labels: { boxWidth: 12, font: { family: 'Inter', size: 11 } } },
-                        title: { display: true, text: filterCat === 'all' ? 'สัดส่วนจำนวนพัสดุแบ่งตามหมวดหมู่' : `สัดส่วนพัสดุในหมวดหมู่ "${filterCat}"`, font: { family: 'Inter', size: 14 } },
-                        tooltip: { titleFont: { family: 'Inter' }, bodyFont: { family: 'Inter' } }
-                    },
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { position: 'right', labels: { boxWidth: 12, font: { family: 'Inter', size: 11 } } }, title: { display: true, text: filterCat === 'all' ? 'สัดส่วนจำนวนพัสดุแบ่งตามหมวดหมู่' : `สัดส่วนพัสดุในหมวดหมู่ "${filterCat}"`, font: { family: 'Inter', size: 14 } }, tooltip: { titleFont: { family: 'Inter' }, bodyFont: { family: 'Inter' } } },
                     cutout: '60%'
                 }
             });
         }
 
-        // ==========================================
-        // 🌟 ระบบ Report Builder
-        // ==========================================
         function populateUserFilter() {
             const userSelect = document.getElementById('reportUser');
             if(!userSelect) return;
-            
             let users = [];
             let seen = new Set();
             for(let t of transactionItems) {
@@ -543,9 +719,7 @@
                 }
             }
             users.sort((a,b) => a.name.localeCompare(b.name));
-            
-            userSelect.innerHTML = `<option value="all">ทุกคน</option>` +
-                users.map(u => `<option value="${u.id}">${u.name}</option>`).join('');
+            userSelect.innerHTML = `<option value="all">ทุกคน</option>` + users.map(u => `<option value="${u.id}">${u.name}</option>`).join('');
         }
 
         function toggleReportFilters() {
@@ -583,8 +757,7 @@
 
                 tbody.innerHTML = inventoryItems.map(item => {
                     const statusHtml = item.stockQuantity <= item.minimumStock
-                        ? `<span class="text-red-500 font-bold">ใกล้หมด</span>`
-                        : `<span class="text-green-600">ปกติ</span>`;
+                        ? `<span class="text-red-500 font-bold">ใกล้หมด</span>` : `<span class="text-green-600">ปกติ</span>`;
                     return `<tr class="border-b border-gray-200">
                         <td class="p-2 text-sm font-mono text-gray-500">${item.itemId}</td>
                         <td class="p-2 text-sm">${item.category || 'ทั่วไป'}</td>
@@ -596,7 +769,6 @@
 
             } else if (type === 'user' || type === 'date') {
                 title.textContent = type === 'user' ? 'รายงานประวัติการเบิกพัสดุ (รายบุคคล)' : 'รายงานประวัติการเบิกพัสดุ (ตามช่วงเวลา)';
-
                 let filteredTxns = transactionItems.filter(t => t.type === 'เบิก' && t.status === 'สำเร็จ');
 
                 if (type === 'user') {
@@ -606,21 +778,16 @@
                         const uSelect = document.getElementById('reportUser');
                         const uName = uSelect.options[uSelect.selectedIndex].text;
                         subtitle.textContent += ` | ผู้เบิก: ${uName}`;
-                    } else {
-                        subtitle.textContent += ` | ผู้เบิก: ทุกคน`;
-                    }
+                    } else { subtitle.textContent += ` | ผู้เบิก: ทุกคน`; }
                 } else if (type === 'date') {
                     const start = document.getElementById('reportStartDate').value;
                     const end = document.getElementById('reportEndDate').value;
-
                     if (start) {
-                        const startDate = new Date(start);
-                        startDate.setHours(0,0,0,0);
+                        const startDate = new Date(start); startDate.setHours(0,0,0,0);
                         filteredTxns = filteredTxns.filter(t => new Date(t.timestamp) >= startDate);
                     }
                     if (end) {
-                        const endDate = new Date(end);
-                        endDate.setHours(23,59,59,999);
+                        const endDate = new Date(end); endDate.setHours(23,59,59,999);
                         filteredTxns = filteredTxns.filter(t => new Date(t.timestamp) <= endDate);
                     }
                     subtitle.textContent += ` | ช่วงเวลา: ${start ? new Date(start).toLocaleDateString('th-TH') : 'เริ่มต้น'} ถึง ${end ? new Date(end).toLocaleDateString('th-TH') : 'ปัจจุบัน'}`;
@@ -664,10 +831,6 @@
             };
             html2pdf().set(opt).from(element).save();
         }
-
-        // ==========================================
-        // ส่วนฟังก์ชันจัดการหน้าจออื่นๆ
-        // ==========================================
 
         function getDropdownData(fieldId) {
             if (fieldId === 'add_itemId') return inventoryItems.map(i => i.itemId);
@@ -720,24 +883,14 @@
             autoFillItemInfo('id');
             const qtyInput = document.getElementById('add_qty');
             qtyInput.focus(); 
-            // เลื่อนหน้าจอลงมาให้ช่อง "จำนวนที่นำเข้า" อยู่ตรงกลางหน้าจอพอดี
             qtyInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
 
-        // 🌟 ฟังก์ชันใหม่: สลับไปหน้า Admin และเติมข้อมูลเตรียมนำเข้าทันที
         function goToAddStock(itemId) {
-            if (userRole !== 'Admin') return; // ป้องกัน User ทั่วไปกด
-
+            if (userRole !== 'Admin') return; 
             const userView = document.getElementById('userView');
-            // หากตอนนี้อยู่หน้า User ให้สลับไปหน้า Admin ก่อน
-            if (!userView.classList.contains('hide')) {
-                toggleAdminMode();
-            }
-
-            // หน่วงเวลาเล็กน้อยเพื่อให้หน้าจอเปลี่ยนเสร็จ แล้วค่อยเรียกฟังก์ชันเติมข้อมูลและเลื่อนจอ
-            setTimeout(() => {
-                fillStockFromLowStock(itemId);
-            }, 150);
+            if (!userView.classList.contains('hide')) toggleAdminMode();
+            setTimeout(() => { fillStockFromLowStock(itemId); }, 150);
         }
 
         function autoFillItemInfo(trigger) {
@@ -813,20 +966,13 @@
 
             filteredItems.forEach(item => {
                 const qtyInCart = cart[item.itemId] || 0;
-                
-                // 🌟 เช็คสถานะคงเหลือ
                 const isOutOfStock = item.stockQuantity <= 0;
                 const isLowStock = !isOutOfStock && item.stockQuantity <= item.minimumStock;
 
-                // 🌟 กำหนดสีป้ายตามสถานะ
-                let badgeClass = 'bg-green-50 border-green-200 text-green-700'; // สีเขียวอ่อน ปกติ
-                if (isOutOfStock) {
-                    badgeClass = 'bg-gray-100 border-gray-200 text-gray-500'; // สีเทา หมด
-                } else if (isLowStock) {
-                    badgeClass = 'bg-yellow-50 border-yellow-300 text-yellow-700'; // สีเหลืองอ่อน ใกล้หมด
-                }
+                let badgeClass = 'bg-green-50 border-green-200 text-green-700'; 
+                if (isOutOfStock) badgeClass = 'bg-gray-100 border-gray-200 text-gray-500'; 
+                else if (isLowStock) badgeClass = 'bg-yellow-50 border-yellow-300 text-yellow-700'; 
 
-                // 🌟 ตรวจสอบสิทธิ์ว่าเป็น Admin หรือไม่ เพื่อเปิดใช้งานการกดปุ่ม
                 let adminClickAttr = '';
                 let adminHoverClass = '';
                 if (userRole === 'Admin') {
@@ -834,13 +980,20 @@
                     adminHoverClass = 'cursor-pointer hover:shadow-md hover:scale-105 transform transition';
                 }
 
+                // 🌟 อัปเดต HTML ของ Card เพื่อเพิ่ม onclick ให้กับรูปภาพ
+                const imgUrl = item.imageUrl || 'https://placehold.co/400x400/545859/FFD100?text=No+Image';
+                
                 const card = document.createElement('div');
                 card.className = `bg-white rounded-2xl shadow p-3 flex flex-col transition-opacity ${isOutOfStock ? 'opacity-60 grayscale' : ''}`;
                 card.innerHTML = `
-                    <div class="relative aspect-square bg-gray-200 rounded-xl mb-2 overflow-hidden flex items-center justify-center">
-                        <img src="${item.imageUrl}" onerror="this.src='https://placehold.co/400x400/545859/FFD100?text=No+Image'" class="object-cover w-full h-full">
-                        <div class="absolute top-2 left-2 bg-dark/80 text-highlight text-[10px] font-bold px-2 py-0.5 rounded shadow">
+                    <div class="relative aspect-square bg-gray-200 rounded-xl mb-2 overflow-hidden flex items-center justify-center cursor-pointer hover:opacity-90 transition" onclick="openImageLightbox('${item.itemId}')" title="คลิกเพื่อดูรูปใหญ่">
+                        <img src="${imgUrl}" onerror="this.src='https://placehold.co/400x400/545859/FFD100?text=No+Image'" class="object-cover w-full h-full">
+                        <div class="absolute top-2 left-2 bg-dark/80 text-highlight text-[10px] font-bold px-2 py-0.5 rounded shadow pointer-events-none">
                             ${item.category || 'ทั่วไป'}
+                        </div>
+                        <!-- ไอคอนแว่นขยายเล็กๆ มุมขวาล่าง -->
+                        <div class="absolute bottom-2 right-2 bg-dark/60 text-white p-1 rounded-full pointer-events-none">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" /></svg>
                         </div>
                     </div>
                     <div class="text-[10px] text-gray-400 font-mono">${item.itemId}</div>
@@ -851,7 +1004,7 @@
                         </span>
                     </div>
                     ${isOutOfStock ? 
-                        `<button disabled class="mt-3 w-full bg-gray-300 text-gray-500 py-2 rounded-lg font-bold text-sm cursor-not-allowed">พัสดุหมด</button>` :
+                        `<button disabled class="mt-3 w-full bg-gray-300 text-gray-500 py-2 rounded-lg font-bold text-sm cursor-not-allowed">สินค้าหมด</button>` :
                         `<div class="mt-3 flex items-center justify-between bg-gray-50 rounded-lg p-1 border border-gray-200">
                             <button onclick="updateCart('${item.itemId}', -1)" class="w-8 h-8 rounded bg-white shadow flex items-center justify-center text-primary font-bold hover:bg-gray-100">-</button>
                             <input type="number" id="qty-${item.itemId}" value="${qtyInCart}" 
@@ -918,7 +1071,7 @@
         }
 
         async function processCheckout(itemsData) {
-            document.getElementById('loading').classList.remove('hide');
+            showLoading('กำลังบันทึกข้อมูล...');
             const payload = { action: 'checkout', userId: currentUser.userId, cart: itemsData };
             try {
                 const response = await fetch(GAS_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(payload) });
@@ -926,7 +1079,7 @@
                 let result;
                 try { result = JSON.parse(rawText); } catch(e) { throw new Error("ระบบฝั่ง GAS ตอบกลับมาผิดรูปแบบ"); }
                 
-                document.getElementById('loading').classList.add('hide');
+                hideLoading();
                 if (result.status === 'success') {
                     cart = {}; updateCartSummary();
                     Swal.fire('สำเร็จ!', 'บันทึกการเบิกพัสดุเรียบร้อยแล้วระบบได้แจ้งเตือนไปที่ LINE ของคุณ', 'success').then(() => {
@@ -937,7 +1090,7 @@
                     Swal.fire('เกิดข้อผิดพลาด', result.message, 'error');
                 }
             } catch (error) {
-                document.getElementById('loading').classList.add('hide');
+                hideLoading();
                 showError('ไม่สามารถเชื่อมต่อได้: ' + error.message);
             }
         }
@@ -975,20 +1128,20 @@
                     adminId: currentUser.userId
                 }
             };
-            document.getElementById('loading').classList.remove('hide');
+            showLoading('กำลังบันทึกข้อมูลนำเข้า...');
             try {
                 const response = await fetch(GAS_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(payload) });
                 const result = await response.json();
-                document.getElementById('loading').classList.add('hide');
+                hideLoading();
                 if (result.status === 'success') {
                     Swal.fire('สำเร็จ', 'บันทึกการนำเข้าพัสดุเรียบร้อย', 'success');
                     clearAddStockForm();
-                    loadItems(); // จะทำการ renderDashboard ใหม่อัตโนมัติด้วย
+                    loadItems(); 
                 } else {
                     Swal.fire('ผิดพลาด', result.message, 'error');
                 }
             } catch (error) {
-                document.getElementById('loading').classList.add('hide');
+                hideLoading();
                 showError('เชื่อมต่อระบบล้มเหลว');
             }
         }
