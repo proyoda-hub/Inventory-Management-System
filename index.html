@@ -6,7 +6,6 @@
     <title>ระบบเบิกพัสดุ</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
     <script>
@@ -37,6 +36,30 @@
         .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
         
         .swal-image-modal { padding: 1em !important; border-radius: 1.5rem !important; }
+
+        /* 🌟 CSS พิเศษสำหรับจัดรูปแบบตอนเซฟเป็น PDF (Print Mode) */
+        @media print {
+            body { background-color: white !important; }
+            
+            /* ซ่อนส่วนที่ไม่อยากให้ออกใน PDF (เมนู, ฟอร์มแอดมิน, ปุ่มต่างๆ) */
+            nav, #loading, #userView, #cartBar { display: none !important; }
+            #adminView > .flex, #adminView > .bg-white.mb-6, #adminView > .grid { display: none !important; }
+            #adminView > .bg-white.mt-6 > h3, #adminView > .bg-white.mt-6 > .grid { display: none !important; }
+            #reportPreviewContainer button { display: none !important; }
+
+            /* ล้างการตั้งค่ากล่องที่ทำให้ตารางแหว่งหาย */
+            #adminView { padding: 0 !important; max-width: 100% !important; }
+            #adminView > .bg-white.mt-6 { padding: 0 !important; margin: 0 !important; box-shadow: none !important; }
+            .overflow-x-auto { overflow: visible !important; border: none !important; background: transparent !important; padding: 0 !important; box-shadow: none !important; }
+            
+            /* จัดหน้ากระดาษรายงานให้เต็ม 100% */
+            #reportPreviewContainer { display: block !important; width: 100% !important; margin: 0 !important; }
+            #reportPaper { width: 100% !important; margin: 0 !important; padding: 0 !important; box-shadow: none !important; border: none !important; }
+            
+            /* บังคับให้พิมพ์สี Background ของตาราง (ป้องกันตารางขาวล้วน) */
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            @page { margin: 15mm; size: A4 portrait; }
+        }
     </style>
 </head>
 <body class="text-dark bg-gray-100 min-h-screen pb-20">
@@ -249,13 +272,15 @@
             <!-- Report Preview -->
             <div id="reportPreviewContainer" class="hide flex flex-col items-center">
                 <div class="w-full max-w-[190mm] flex justify-end mb-3">
+                    <!-- 🌟 เปลี่ยนปุ่มตรงนี้ให้เป็นคำสั่ง Print แทน -->
                     <button onclick="exportCurrentReportToPDF()" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg flex items-center justify-center gap-2 hover:bg-blue-700 transition shadow">
-                        📥 ดาวน์โหลดเป็น PDF
+                        🖨️ พิมพ์ / บันทึกเป็น PDF
                     </button>
                 </div>
                 
                 <div class="w-full overflow-x-auto border-4 border-gray-200 rounded-lg bg-gray-200 p-4 shadow-inner">
-                    <div id="reportPaper" class="p-8 bg-white text-black mx-auto shadow-sm" style="width: 190mm; min-height: 297mm;">
+                    <!-- 🌟 นำ min-height: 297mm ออก ป้องกันหน้าว่าง -->
+                    <div id="reportPaper" class="p-8 bg-white text-black mx-auto shadow-sm" style="width: 190mm;">
                         <h1 id="reportTitle" class="text-2xl font-bold text-center mb-2">รายงานสรุปยอดพัสดุคงเหลือ</h1>
                         <p id="reportSubtitle" class="text-center text-gray-600 mb-6 text-sm"></p>
                         
@@ -407,12 +432,9 @@
         // 🌟 ระบบเปลี่ยนหมวดหมู่จากหน้าเว็บ
         // ==========================================
         window.promptChangeCategory = function(event, itemId, currentCategory) {
-            // หยุดการกระทำอื่นๆ (เช่น การคลิกรูปเพื่อเปิด Lightbox จะไม่ทำงานถ้ากดโดนป้ายหมวดหมู่)
             if(event) event.stopPropagation();
-            
             if (userRole !== 'Admin') return;
 
-            // รวบรวมหมวดหมู่ทั้งหมดที่มีอยู่เพื่อทำ Dropdown
             const uniqueCats = [...new Set(inventoryItems.map(i => i.category || 'ทั่วไป'))].filter(c => c !== '');
             let optionsHtml = uniqueCats.map(c => `<option value="${c}" ${c === currentCategory ? 'selected' : ''}>${c}</option>`).join('');
 
@@ -433,33 +455,21 @@
                         <input type="text" id="swal-cat-input" class="w-full border border-gray-300 p-2.5 rounded-lg mt-1 focus:ring-2 focus:ring-highlight focus:outline-none" value="${currentCategory}">
                     </div>
                 `,
-                showCancelButton: true,
-                confirmButtonColor: '#545859',
-                cancelButtonColor: '#d33',
-                confirmButtonText: 'ถัดไป',
-                cancelButtonText: 'ยกเลิก',
-                preConfirm: () => {
-                    return document.getElementById('swal-cat-input').value.trim();
-                }
+                showCancelButton: true, confirmButtonColor: '#545859', cancelButtonColor: '#d33',
+                confirmButtonText: 'ถัดไป', cancelButtonText: 'ยกเลิก',
+                preConfirm: () => { return document.getElementById('swal-cat-input').value.trim(); }
             }).then((result) => {
                 if (result.isConfirmed && result.value) {
                     const newCategory = result.value;
-                    if (newCategory === currentCategory) return; // ถ้าไม่ได้แก้ชื่อหมวดหมู่ ก็ไม่ต้องทำอะไร
+                    if (newCategory === currentCategory) return; 
 
-                    // หน้าต่างยืนยันรอบสอง
                     Swal.fire({
                         title: 'ยืนยันการเปลี่ยนหมวดหมู่',
                         html: `คุณต้องการเปลี่ยนหมวดหมู่<br>จาก <b class="text-red-500">"${currentCategory}"</b> เป็น <b class="text-green-600">"${newCategory}"</b><br>ใช่หรือไม่?`,
-                        icon: 'question',
-                        showCancelButton: true,
-                        confirmButtonColor: '#3B82F6',
-                        cancelButtonColor: '#545859',
-                        confirmButtonText: 'ยืนยันการเปลี่ยน',
-                        cancelButtonText: 'ยกเลิก'
+                        icon: 'question', showCancelButton: true, confirmButtonColor: '#3B82F6', cancelButtonColor: '#545859',
+                        confirmButtonText: 'ยืนยันการเปลี่ยน', cancelButtonText: 'ยกเลิก'
                     }).then((confirmResult) => {
-                        if (confirmResult.isConfirmed) {
-                            updateCategoryInGAS(itemId, newCategory);
-                        }
+                        if (confirmResult.isConfirmed) updateCategoryInGAS(itemId, newCategory);
                     });
                 }
             });
@@ -468,43 +478,25 @@
         async function updateCategoryInGAS(itemId, newCategory) {
             showLoading('กำลังเปลี่ยนหมวดหมู่...');
             try {
-                const payload = {
-                    action: 'updateCategory',
-                    itemId: itemId,
-                    newCategory: newCategory
-                };
-                
-                const response = await fetch(GAS_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify(payload)
-                });
+                const payload = { action: 'updateCategory', itemId: itemId, newCategory: newCategory };
+                const response = await fetch(GAS_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(payload) });
                 const result = await response.json();
                 hideLoading();
 
                 if (result.status === 'success') {
-                    // อัปเดตข้อมูลใน UI ปัจจุบัน
                     const itemIndex = inventoryItems.findIndex(i => String(i.itemId) === String(itemId));
                     if(itemIndex > -1) inventoryItems[itemIndex].category = newCategory;
 
-                    // วาดหน้าจอและแท็บหมวดหมู่ใหม่
                     renderCategoryTabs();
                     renderItems();
                     
-                    // ถ้าแอดมินเปิดหน้า Dashboard ไว้ด้วย ก็ให้กราฟอัปเดตตาม
                     if (!document.getElementById('adminView').classList.contains('hide')) {
                         const currentDashFilter = document.getElementById('dashCategoryFilter');
                         if (currentDashFilter) renderDashboard(currentDashFilter.value);
                     }
-
                     Swal.fire({ icon: 'success', title: 'เปลี่ยนหมวดหมู่สำเร็จ', timer: 1500, showConfirmButton: false });
-                } else {
-                    Swal.fire('ผิดพลาด', result.message, 'error');
-                }
-            } catch (err) {
-                hideLoading();
-                Swal.fire('ผิดพลาด', 'เชื่อมต่อล้มเหลว', 'error');
-            }
+                } else { Swal.fire('ผิดพลาด', result.message, 'error'); }
+            } catch (err) { hideLoading(); Swal.fire('ผิดพลาด', 'เชื่อมต่อล้มเหลว', 'error'); }
         }
 
         // ==========================================
@@ -551,9 +543,7 @@
                     </div>
                     ${adminControls}
                 `,
-                showCloseButton: true,
-                showConfirmButton: false,
-                customClass: { popup: 'swal-image-modal' }
+                showCloseButton: true, showConfirmButton: false, customClass: { popup: 'swal-image-modal' }
             });
         }
 
@@ -793,11 +783,11 @@
             document.getElementById('reportPreviewContainer').scrollIntoView({ behavior: 'smooth' });
         }
 
+        // 🌟 อัปเดตฟังก์ชันดาวน์โหลด PDF เพื่อแก้ปัญหาภาษาไทยและหน้ากระดาษ
         function exportCurrentReportToPDF() {
-            const element = document.getElementById('reportPaper');
-            const title = document.getElementById('reportTitle').textContent.trim();
-            const opt = { margin: 10, filename: `${title}_${new Date().toISOString().split('T')[0]}.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } };
-            html2pdf().set(opt).from(element).save();
+            // ใช้หน้าต่าง Print ของบราวเซอร์โดยตรง ซึ่งจะทำให้สระภาษาไทยถูกต้อง 100% 
+            // และแก้ปัญหาตารางตกขอบ หรือหน้าแรกว่างเปล่าจากการตัดหน้ากระดาษ
+            window.print();
         }
 
         function getDropdownData(fieldId) {
@@ -910,15 +900,13 @@
                 let adminClickAttr = '';
                 let adminHoverClass = '';
                 
-                // 🌟 ตัวแปรสำหรับป้ายหมวดหมู่
                 let categoryClickAttr = '';
-                let categoryHoverClass = 'pointer-events-none'; // ป้องกันการกดทะลุสำหรับ User ธรรมดา
+                let categoryHoverClass = 'pointer-events-none'; 
                 
                 if (userRole === 'Admin') {
                     adminClickAttr = `onclick="goToAddStock('${item.itemId}')" title="คลิกเพื่อนำเข้าพัสดุ"`;
                     adminHoverClass = 'cursor-pointer hover:shadow-md hover:scale-105 transform transition';
                     
-                    // 🌟 เพิ่มการตั้งค่าคลิกเปลี่ยนหมวดหมู่ให้ Admin
                     categoryClickAttr = `onclick="promptChangeCategory(event, '${item.itemId}', '${item.category || 'ทั่วไป'}')" title="คลิกเพื่อเปลี่ยนหมวดหมู่"`;
                     categoryHoverClass = 'cursor-pointer hover:bg-highlight hover:text-dark transition pointer-events-auto shadow-md';
                 }
@@ -931,7 +919,6 @@
                     <div class="relative aspect-square bg-gray-200 rounded-xl mb-2 overflow-hidden flex items-center justify-center cursor-pointer hover:opacity-90 transition" onclick="openImageLightbox('${item.itemId}')" title="คลิกเพื่อดูรูปใหญ่">
                         <img src="${imgUrl}" onerror="this.src='https://placehold.co/400x400/545859/FFD100?text=No+Image'" class="object-cover w-full h-full">
                         
-                        <!-- 🌟 เปลี่ยนโค้ดส่วนป้ายหมวดหมู่ตรงนี้ให้ Admin กดได้ -->
                         <div ${categoryClickAttr} class="absolute top-2 left-2 bg-dark/80 text-highlight text-[10px] font-bold px-2 py-0.5 rounded shadow ${categoryHoverClass}">
                             ${item.category || 'ทั่วไป'}
                         </div>
