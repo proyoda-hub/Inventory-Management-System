@@ -66,7 +66,6 @@
 
     <input type="file" id="imageUploader" accept="image/*" class="hide" onchange="processImageSelection(event)">
 
-    <!-- Navbar -->
     <nav class="bg-dark text-highlight p-4 shadow-md sticky top-0 z-50 flex justify-between items-center">
         <div class="font-bold text-lg flex items-center gap-2">
             📦 ระบบเบิกพัสดุ
@@ -78,13 +77,11 @@
         </div>
     </nav>
 
-    <!-- Loading Overlay -->
     <div id="loading" class="fixed inset-0 bg-dark/80 flex flex-col justify-center items-center z-[100] text-highlight hide">
         <div class="animate-spin rounded-full h-12 w-12 border-b-4 border-highlight mb-4"></div>
         <p id="loadingText" class="font-bold">กำลังโหลดข้อมูล...</p>
     </div>
 
-    <!-- User View (Dashboard) -->
     <main id="userView" class="p-4 max-w-4xl mx-auto hide">
         <div class="flex justify-between items-end mb-4 border-b-2 border-highlight pb-1">
             <h2 class="text-xl font-bold text-primary">รายการพัสดุ</h2>
@@ -102,7 +99,6 @@
         <div id="itemList" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
     </main>
 
-    <!-- Cart Summary Bottom Bar -->
     <div id="cartBar" class="fixed bottom-0 left-0 w-full bg-primary text-white p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] flex justify-between items-center z-40 rounded-t-2xl hide">
         <div>
             <span class="text-sm">เลือกแล้ว:</span>
@@ -113,14 +109,12 @@
         </button>
     </div>
 
-    <!-- Admin View -->
     <main id="adminView" class="hide p-4 max-w-5xl mx-auto">
         <div class="flex justify-between items-center mb-6">
             <h2 class="text-xl font-bold text-primary border-b-2 border-highlight inline-block pb-1">โหมดผู้ดูแลระบบ</h2>
             <button onclick="toggleAdminMode()" class="bg-gray-200 text-dark px-4 py-1.5 rounded-lg font-bold shadow hover:bg-gray-300 transition">กลับหน้าแรก</button>
         </div>
 
-        <!-- Interactive Dashboard -->
         <div class="bg-white p-5 rounded-2xl shadow mb-6">
             <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 border-b border-gray-200 pb-3 gap-3">
                 <h3 class="font-bold text-lg text-dark flex items-center gap-2">📈 ภาพรวมคลังพัสดุ (Dashboard)</h3>
@@ -164,15 +158,12 @@
                 </div>
             </div>
 
-            <!-- 🌟 เพิ่มกราฟใหม่ 2 ตัว: ยอดเบิกรายวัน และ ยอดเบิกตาม User -->
             <div class="grid md:grid-cols-2 gap-6 mt-6">
-                <!-- กราฟเส้น: สถิติการเบิกรายวัน -->
                 <div class="border border-gray-200 rounded-xl p-4 shadow-sm bg-gray-50">
                     <div class="h-[280px] relative">
                         <canvas id="lineChart"></canvas>
                     </div>
                 </div>
-                <!-- กราฟแท่งแนวนอน: ยอดเบิกตามผู้ใช้งาน -->
                 <div class="border border-gray-200 rounded-xl p-4 shadow-sm bg-gray-50">
                     <div class="h-[280px] relative">
                         <canvas id="userChart"></canvas>
@@ -183,7 +174,6 @@
         </div>
 
         <div class="grid md:grid-cols-2 gap-6">
-            <!-- Add Stock Form -->
             <div class="bg-white p-5 rounded-2xl shadow">
                 <h3 class="font-bold text-lg mb-4 text-dark flex items-center gap-2">➕ นำเข้าพัสดุ (Add/Update)</h3>
                 <form id="addStockForm" onsubmit="handleAddStock(event)" class="space-y-4">
@@ -239,7 +229,6 @@
                 </form>
             </div>
 
-            <!-- Low Stock -->
             <div class="space-y-6">
                 <div class="bg-red-50 border border-red-200 p-5 rounded-2xl shadow">
                     <h3 class="font-bold text-lg mb-3 text-red-700 flex items-center gap-2">⚠️ แจ้งเตือนพัสดุใกล้หมด ⚠️</h3>
@@ -249,7 +238,6 @@
             </div>
         </div>
 
-        <!-- ระบบออกรายงาน -->
         <div class="bg-white p-5 rounded-2xl shadow mt-6">
             <h3 class="font-bold text-lg mb-4 text-dark flex items-center gap-2">📊 ระบบออกรายงาน (Report)</h3>
             
@@ -286,7 +274,6 @@
                 </div>
             </div>
 
-            <!-- Report Preview -->
             <div id="reportPreviewContainer" class="hide flex flex-col items-center">
                 <div class="w-full max-w-[190mm] flex justify-end mb-3">
                     <button onclick="exportCurrentReportToPDF()" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg flex items-center justify-center gap-2 hover:bg-blue-700 transition shadow">
@@ -310,7 +297,6 @@
         </div>
     </main>
 
-    <!-- LIFF SDK -->
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script>
         // ==========================================
@@ -736,7 +722,7 @@
             });
 
             // ==========================================
-            // 🌟 3. กราฟเส้น (Line Chart) - สถิติการเบิกรายวัน (7 วันย้อนหลัง)
+            // 🌟 3. กราฟเส้น (Line Chart) - สถิติการเบิกพัสดุรวมรายวัน (7 วันย้อนหลัง)
             // ==========================================
             // 🌟 กรองประวัติ "ไม่ใช้งาน" และกรองตามตัวกรองหมวดหมู่
             const checkouts = transactionItems.filter(t => {
@@ -763,7 +749,8 @@
                 const dateStr = d.toLocaleDateString('th-TH', {day:'numeric', month:'short'});
                 const index = last7Days.indexOf(dateStr);
                 if(index > -1) {
-                    dailyCounts[index]++; // นับจำนวนรายการที่เบิกในแต่ละวัน
+                    // 🌟 แก้ไข: บวกรวมจำนวนพัสดุจริง (quantity) แทนการนับครั้ง (++เดิม)
+                    dailyCounts[index] += (parseInt(t.quantity) || 0); 
                 }
             });
 
@@ -774,7 +761,7 @@
                 data: {
                     labels: last7Days,
                     datasets: [{
-                        label: 'จำนวนรายการที่เบิก (ครั้ง)',
+                        label: 'จำนวนพัสดุที่เบิก (ชิ้น/หน่วย)',
                         data: dailyCounts,
                         borderColor: '#3B82F6', // Blue
                         backgroundColor: 'rgba(59, 130, 246, 0.2)',
@@ -787,20 +774,21 @@
                 },
                 options: {
                     responsive: true, maintainAspectRatio: false,
-                    plugins: { legend: { display: false }, title: { display: true, text: filterCat === 'all' ? 'สถิติการเบิกพัสดุ (7 วันย้อนหลัง)' : `สถิติการเบิก "${filterCat}" (7 วันย้อนหลัง)`, font: { family: 'Inter', size: 14 } } },
-                    scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } }, x: { ticks: { font: { family: 'Inter', size: 10 } } } }
+                    plugins: { legend: { display: false }, title: { display: true, text: filterCat === 'all' ? 'สถิติยอดเบิกพัสดุรายวัน (7 วันย้อนหลัง)' : `สถิติยอดเบิกพัสดุ "${filterCat}" (7 วันย้อนหลัง)`, font: { family: 'Inter', size: 14 } } },
+                    scales: { y: { beginAtZero: true }, x: { ticks: { font: { family: 'Inter', size: 10 } } } }
                 }
             });
 
             // ==========================================
-            // 🌟 4. กราฟแท่งแนวนอน (Horizontal Bar Chart) - ยอดเบิกตาม User
+            // 🌟 4. กราฟแท่งแนวนอน (Horizontal Bar Chart) - ยอดเบิกพัสดุรวมตาม User
             // ==========================================
             const userMap = {};
             checkouts.forEach(t => {
-                userMap[t.userName] = (userMap[t.userName] || 0) + 1;
+                // 🌟 แก้ไข: บวกรวมจำนวนพัสดุจริง (quantity) แทนการนับครั้ง (+1เดิม)
+                userMap[t.userName] = (userMap[t.userName] || 0) + (parseInt(t.quantity) || 0);
             });
             
-            // จัดอันดับ Top 5 ผู้ใช้งานที่เบิกบ่อยที่สุด
+            // จัดอันดับ Top 5 ผู้ใช้งานที่เบิกเยอะที่สุด
             const sortedUsers = Object.entries(userMap).sort((a,b) => b[1] - a[1]).slice(0, 5);
             const userLabels = sortedUsers.map(u => u[0].length > 15 ? u[0].substring(0, 15) + '...' : u[0]);
             const userDataCounts = sortedUsers.map(u => u[1]);
@@ -812,7 +800,7 @@
                 data: {
                     labels: userLabels,
                     datasets: [{
-                        label: 'จำนวนรายการที่เบิก (ครั้ง)',
+                        label: 'จำนวนพัสดุที่เบิก (ชิ้น/หน่วย)',
                         data: userDataCounts,
                         backgroundColor: '#10B981', // Green
                         hoverBackgroundColor: '#059669',
@@ -822,8 +810,8 @@
                 options: {
                     indexAxis: 'y', // ตั้งค่าเป็นกราฟแนวนอน
                     responsive: true, maintainAspectRatio: false,
-                    plugins: { legend: { display: false }, title: { display: true, text: filterCat === 'all' ? 'ผู้ใช้งานที่เบิกบ่อยที่สุด (Top 5)' : `ผู้เบิก "${filterCat}" บ่อยที่สุด (Top 5)`, font: { family: 'Inter', size: 14 } } },
-                    scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } }, y: { ticks: { font: { family: 'Inter', size: 11 } } } }
+                    plugins: { legend: { display: false }, title: { display: true, text: filterCat === 'all' ? 'ผู้ใช้งานที่เบิกพัสดุเยอะที่สุด (Top 5)' : `ผู้เบิก "${filterCat}" เยอะที่สุด (Top 5)`, font: { family: 'Inter', size: 14 } } },
+                    scales: { x: { beginAtZero: true }, y: { ticks: { font: { family: 'Inter', size: 11 } } } }
                 }
             });
         }
@@ -872,7 +860,6 @@
                 title.textContent = 'รายงานสรุปยอดพัสดุคงเหลือ';
                 thead.innerHTML = `<tr><th class="border border-gray-300 p-2 w-2/12">รหัส</th><th class="border border-gray-300 p-2 w-3/12">หมวดหมู่</th><th class="border border-gray-300 p-2 w-4/12">รายการพัสดุ</th><th class="border border-gray-300 p-2 w-2/12 text-center">คงเหลือ</th><th class="border border-gray-300 p-2 w-1/12 text-center">สถานะ</th></tr>`;
                 
-                // ใช้ activeInventoryItems แทน inventoryItems เดิม
                 tbody.innerHTML = activeInventoryItems.map(item => {
                     const statusHtml = item.stockQuantity <= item.minimumStock ? `<span class="text-red-500 font-bold">ใกล้หมด</span>` : `<span class="text-green-600">ปกติ</span>`;
                     return `<tr class="border-b border-gray-200"><td class="p-2 text-sm font-mono text-gray-500">${item.itemId}</td><td class="p-2 text-sm">${item.category || 'ทั่วไป'}</td><td class="p-2 text-sm font-bold">${item.itemName}</td><td class="p-2 text-center text-sm font-bold">${item.stockQuantity}</td><td class="p-2 text-center text-sm">${statusHtml}</td></tr>`;
@@ -914,10 +901,7 @@
             document.getElementById('reportPreviewContainer').scrollIntoView({ behavior: 'smooth' });
         }
 
-        // 🌟 อัปเดตฟังก์ชันดาวน์โหลด PDF เพื่อแก้ปัญหาภาษาไทยและหน้ากระดาษ
         function exportCurrentReportToPDF() {
-            // ใช้หน้าต่าง Print ของบราวเซอร์โดยตรง ซึ่งจะทำให้สระภาษาไทยถูกต้อง 100% 
-            // และแก้ปัญหาตารางตกขอบ หรือหน้าแรกว่างเปล่าจากการตัดหน้ากระดาษ
             window.print();
         }
 
