@@ -738,11 +738,16 @@
             // ==========================================
             // 🌟 3. กราฟเส้น (Line Chart) - สถิติการเบิกรายวัน (7 วันย้อนหลัง)
             // ==========================================
-            // 🌟 กรองประวัติ "ไม่ใช้งาน" ออกด้วย
+            // 🌟 กรองประวัติ "ไม่ใช้งาน" และกรองตามตัวกรองหมวดหมู่
             const checkouts = transactionItems.filter(t => {
                 if (t.type !== 'เบิก' || t.status !== 'สำเร็จ') return false;
                 const invItem = inventoryItems.find(i => String(i.itemId) === String(t.itemId));
-                return !(invItem && (invItem.category ? invItem.category.trim() : '') === 'ไม่ใช้งาน');
+                const itemCat = invItem ? (invItem.category ? invItem.category.trim() : 'ทั่วไป') : 'ทั่วไป';
+                
+                if (itemCat === 'ไม่ใช้งาน') return false;
+                if (filterCat !== 'all' && itemCat !== filterCat) return false;
+                
+                return true;
             });
             
             const last7Days = [];
@@ -782,7 +787,7 @@
                 },
                 options: {
                     responsive: true, maintainAspectRatio: false,
-                    plugins: { legend: { display: false }, title: { display: true, text: 'สถิติการเบิกพัสดุ (7 วันย้อนหลัง)', font: { family: 'Inter', size: 14 } } },
+                    plugins: { legend: { display: false }, title: { display: true, text: filterCat === 'all' ? 'สถิติการเบิกพัสดุ (7 วันย้อนหลัง)' : `สถิติการเบิก "${filterCat}" (7 วันย้อนหลัง)`, font: { family: 'Inter', size: 14 } } },
                     scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } }, x: { ticks: { font: { family: 'Inter', size: 10 } } } }
                 }
             });
@@ -817,7 +822,7 @@
                 options: {
                     indexAxis: 'y', // ตั้งค่าเป็นกราฟแนวนอน
                     responsive: true, maintainAspectRatio: false,
-                    plugins: { legend: { display: false }, title: { display: true, text: 'ผู้ใช้งานที่เบิกบ่อยที่สุด (Top 5)', font: { family: 'Inter', size: 14 } } },
+                    plugins: { legend: { display: false }, title: { display: true, text: filterCat === 'all' ? 'ผู้ใช้งานที่เบิกบ่อยที่สุด (Top 5)' : `ผู้เบิก "${filterCat}" บ่อยที่สุด (Top 5)`, font: { family: 'Inter', size: 14 } } },
                     scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } }, y: { ticks: { font: { family: 'Inter', size: 11 } } } }
                 }
             });
