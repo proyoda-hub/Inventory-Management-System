@@ -289,14 +289,12 @@
             <!-- Report Preview -->
             <div id="reportPreviewContainer" class="hide flex flex-col items-center">
                 <div class="w-full max-w-[190mm] flex justify-end mb-3">
-                    <!-- 🌟 เปลี่ยนปุ่มตรงนี้ให้เป็นคำสั่ง Print แทน -->
                     <button onclick="exportCurrentReportToPDF()" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg flex items-center justify-center gap-2 hover:bg-blue-700 transition shadow">
                         🖨️ พิมพ์ / บันทึกเป็น PDF
                     </button>
                 </div>
                 
                 <div class="w-full overflow-x-auto border-4 border-gray-200 rounded-lg bg-gray-200 p-4 shadow-inner">
-                    <!-- 🌟 นำ min-height: 297mm ออก ป้องกันหน้าว่าง -->
                     <div id="reportPaper" class="p-8 bg-white text-black mx-auto shadow-sm" style="width: 190mm;">
                         <h1 id="reportTitle" class="text-2xl font-bold text-center mb-2">รายงานสรุปยอดพัสดุคงเหลือ</h1>
                         <p id="reportSubtitle" class="text-center text-gray-600 mb-6 text-sm"></p>
@@ -330,7 +328,6 @@
 
         let dashBarChart = null;
         let dashPieChart = null;
-        // 🌟 เพิ่มตัวแปรสำหรับกราฟใหม่
         let dashLineChart = null;
         let dashUserChart = null;
         
@@ -674,15 +671,18 @@
 
         function renderDashboard(filterCat = 'all') {
             const dashFilter = document.getElementById('dashCategoryFilter');
-            const uniqueCats = [...new Set(inventoryItems.map(i => i.category || 'ทั่วไป'))];
+            
+            // 🌟 ไม่รวม "ไม่ใช้งาน" ใน Dashboard
+            const activeItems = inventoryItems.filter(item => (item.category ? item.category.trim() : '') !== 'ไม่ใช้งาน');
+            const uniqueCats = [...new Set(activeItems.map(i => i.category || 'ทั่วไป'))];
             
             if (dashFilter.options.length <= 1) {
                 dashFilter.innerHTML = '<option value="all">ทุกหมวดหมู่</option>' + uniqueCats.map(c => `<option value="${c}">${c}</option>`).join('');
                 dashFilter.value = filterCat;
             }
 
-            let data = inventoryItems;
-            if (filterCat !== 'all') data = inventoryItems.filter(i => (i.category || 'ทั่วไป') === filterCat);
+            let data = activeItems;
+            if (filterCat !== 'all') data = activeItems.filter(i => (i.category || 'ทั่วไป') === filterCat);
 
             document.getElementById('kpiTotalItems').textContent = data.length.toLocaleString();
             document.getElementById('kpiTotalStock').textContent = data.reduce((sum, item) => sum + item.stockQuantity, 0).toLocaleString();
@@ -738,8 +738,12 @@
             // ==========================================
             // 🌟 3. กราฟเส้น (Line Chart) - สถิติการเบิกรายวัน (7 วันย้อนหลัง)
             // ==========================================
-            // กรองเฉพาะประวัติ "เบิก" ที่สำเร็จ
-            const checkouts = transactionItems.filter(t => t.type === 'เบิก' && t.status === 'สำเร็จ');
+            // 🌟 กรองประวัติ "ไม่ใช้งาน" ออกด้วย
+            const checkouts = transactionItems.filter(t => {
+                if (t.type !== 'เบิก' || t.status !== 'สำเร็จ') return false;
+                const invItem = inventoryItems.find(i => String(i.itemId) === String(t.itemId));
+                return !(invItem && (invItem.category ? invItem.category.trim() : '') === 'ไม่ใช้งาน');
+            });
             
             const last7Days = [];
             for(let i=6; i>=0; i--) {
@@ -853,19 +857,31 @@
             const title = document.getElementById('reportTitle');
             const subtitle = document.getElementById('reportSubtitle');
 
+            // 🌟 ไม่รวมรายการ "ไม่ใช้งาน" มาใน Report
+            const activeInventoryItems = inventoryItems.filter(item => (item.category ? item.category.trim() : '') !== 'ไม่ใช้งาน');
+
             thead.innerHTML = ''; tbody.innerHTML = '';
             subtitle.textContent = `พิมพ์เมื่อ: ${new Date().toLocaleDateString('th-TH')} ${new Date().toLocaleTimeString('th-TH')}`;
 
             if (type === 'inventory') {
                 title.textContent = 'รายงานสรุปยอดพัสดุคงเหลือ';
                 thead.innerHTML = `<tr><th class="border border-gray-300 p-2 w-2/12">รหัส</th><th class="border border-gray-300 p-2 w-3/12">หมวดหมู่</th><th class="border border-gray-300 p-2 w-4/12">รายการพัสดุ</th><th class="border border-gray-300 p-2 w-2/12 text-center">คงเหลือ</th><th class="border border-gray-300 p-2 w-1/12 text-center">สถานะ</th></tr>`;
-                tbody.innerHTML = inventoryItems.map(item => {
+                
+                // ใช้ activeInventoryItems แทน inventoryItems เดิม
+                tbody.innerHTML = activeInventoryItems.map(item => {
                     const statusHtml = item.stockQuantity <= item.minimumStock ? `<span class="text-red-500 font-bold">ใกล้หมด</span>` : `<span class="text-green-600">ปกติ</span>`;
                     return `<tr class="border-b border-gray-200"><td class="p-2 text-sm font-mono text-gray-500">${item.itemId}</td><td class="p-2 text-sm">${item.category || 'ทั่วไป'}</td><td class="p-2 text-sm font-bold">${item.itemName}</td><td class="p-2 text-center text-sm font-bold">${item.stockQuantity}</td><td class="p-2 text-center text-sm">${statusHtml}</td></tr>`;
                 }).join('');
             } else if (type === 'user' || type === 'date') {
                 title.textContent = type === 'user' ? 'รายงานประวัติการเบิกพัสดุ (รายบุคคล)' : 'รายงานประวัติการเบิกพัสดุ (ตามช่วงเวลา)';
-                let filteredTxns = transactionItems.filter(t => t.type === 'เบิก' && t.status === 'สำเร็จ');
+                
+                // 🌟 กรองประวัติที่เป็นของ "ไม่ใช้งาน" ออก
+                let filteredTxns = transactionItems.filter(t => {
+                    if (t.type !== 'เบิก' || t.status !== 'สำเร็จ') return false;
+                    const invItem = inventoryItems.find(i => String(i.itemId) === String(t.itemId));
+                    if (invItem && (invItem.category ? invItem.category.trim() : '') === 'ไม่ใช้งาน') return false;
+                    return true;
+                });
 
                 if (type === 'user') {
                     const selectedUser = document.getElementById('reportUser').value;
@@ -972,7 +988,13 @@
 
         function renderCategoryTabs() {
             const tabsContainer = document.getElementById('categoryTabs');
-            const uniqueCategories = [...new Set(inventoryItems.map(item => item.category ? item.category.trim() : 'ทั่วไป'))];
+            let uniqueCategories = [...new Set(inventoryItems.map(item => item.category ? item.category.trim() : 'ทั่วไป'))];
+            
+            // 🌟 ซ่อนแท็บ "ไม่ใช้งาน" สำหรับผู้ใช้ทั่วไป (Admin ยังเห็นได้)
+            if (userRole !== 'Admin') {
+                uniqueCategories = uniqueCategories.filter(c => c !== 'ไม่ใช้งาน');
+            }
+
             const allCategories = ['ทั้งหมด', ...uniqueCategories.filter(c => c !== '')];
             tabsContainer.innerHTML = allCategories.map(cat => {
                 const isActive = currentCategory === cat;
@@ -988,6 +1010,10 @@
             container.innerHTML = '';
             const filteredItems = inventoryItems.filter(item => {
                 const itemCat = item.category ? item.category.trim() : 'ทั่วไป';
+                
+                // 🌟 ตรวจสอบสิทธิ์ (ถ้าไม่ใช่ Admin ห้ามเห็น "ไม่ใช้งาน")
+                if (userRole !== 'Admin' && itemCat === 'ไม่ใช้งาน') return false;
+
                 const matchCategory = (currentCategory === 'ทั้งหมด') || (itemCat === currentCategory);
                 const matchSearch = String(item.itemName).toLowerCase().includes(searchQuery) || String(item.itemId).toLowerCase().includes(searchQuery);
                 return matchCategory && matchSearch;
@@ -1163,7 +1189,18 @@
                 const response = await fetch(`${GAS_URL}?action=getLowStock`);
                 const result = await response.json();
                 if (result.status === 'success' && result.data.length > 0) {
-                    listDiv.innerHTML = result.data.map(item => `<div class="flex justify-between border-b py-2 items-center cursor-pointer hover:bg-red-100 transition px-2 rounded -mx-2" onclick="fillStockFromLowStock('${item.itemId}')" title="คลิกเพื่อเติมข้อมูลพัสดุนี้"><span class="font-bold text-sm">${item.itemName}</span><span class="text-xs bg-white text-red-600 px-2 py-1 rounded font-bold whitespace-nowrap ml-2 border border-red-200 shadow-sm">เหลือ ${item.stockQuantity}</span></div>`).join('');
+                    
+                    // 🌟 กรอง "ไม่ใช้งาน" ออกจากการแจ้งเตือนใกล้หมด
+                    const filteredLowStock = result.data.filter(item => {
+                        const invItem = inventoryItems.find(i => String(i.itemId) === String(item.itemId));
+                        return !(invItem && (invItem.category ? invItem.category.trim() : '') === 'ไม่ใช้งาน');
+                    });
+
+                    if (filteredLowStock.length > 0) {
+                        listDiv.innerHTML = filteredLowStock.map(item => `<div class="flex justify-between border-b py-2 items-center cursor-pointer hover:bg-red-100 transition px-2 rounded -mx-2" onclick="fillStockFromLowStock('${item.itemId}')" title="คลิกเพื่อเติมข้อมูลพัสดุนี้"><span class="font-bold text-sm">${item.itemName}</span><span class="text-xs bg-white text-red-600 px-2 py-1 rounded font-bold whitespace-nowrap ml-2 border border-red-200 shadow-sm">เหลือ ${item.stockQuantity}</span></div>`).join('');
+                    } else { 
+                        listDiv.innerHTML = '<p class="text-center text-sm text-green-600 mt-4">ไม่มีพัสดุใกล้หมด ✅</p>'; 
+                    }
                 } else { listDiv.innerHTML = '<p class="text-center text-sm text-green-600 mt-4">ไม่มีพัสดุใกล้หมด ✅</p>'; }
             } catch (error) { listDiv.innerHTML = '<p class="text-red-500 text-sm">โหลดข้อมูลไม่สำเร็จ</p>'; }
         }
