@@ -414,7 +414,7 @@
             }
         }
 
-        async function loadItems() {
+async function loadItems() {
             try {
                 const response = await fetch(`${GAS_URL}?action=getItems`);
                 const result = await response.json();
@@ -431,8 +431,9 @@
                         document.getElementById('userView').classList.remove('hide');
                         if(Object.keys(cart).length > 0) document.getElementById('cartBar').classList.remove('hide');
                     } else {
-                        fetchLowStock();
-                        renderDashboard(document.getElementById('dashCategoryFilter') ? document.getElementById('dashCategoryFilter').value : 'all');
+                        // 🌟 ดึงค่าตัวกรองปัจจุบันมาใช้งาน
+                        const currentFilter = document.getElementById('dashCategoryFilter') ? document.getElementById('dashCategoryFilter').value : 'all';
+                        renderDashboard(currentFilter);
                     }
                 }
             } catch (error) {
@@ -441,6 +442,26 @@
             }
         }
 
+        function toggleAdminMode() {
+            const userView = document.getElementById('userView');
+            const adminView = document.getElementById('adminView');
+            const cartBar = document.getElementById('cartBar');
+
+            if (userView.classList.contains('hide')) {
+                adminView.classList.add('hide');
+                userView.classList.remove('hide');
+                updateCartSummary(); 
+            } else {
+                userView.classList.add('hide');
+                cartBar.classList.add('hide');
+                adminView.classList.remove('hide');
+                
+                // 🌟 ดึงค่าตัวกรองปัจจุบันมาใช้งาน
+                const currentFilter = document.getElementById('dashCategoryFilter').value || 'all';
+                fetchTransactions(); 
+                renderDashboard(currentFilter);
+            }
+        }
         // ==========================================
         // 🌟 ระบบเปลี่ยนหมวดหมู่จากหน้าเว็บ
         // ==========================================
@@ -664,7 +685,7 @@
             } catch (error) { console.error("ดึงข้อมูลประวัติไม่สำเร็จ", error); }
         }
 
-        function renderDashboard(filterCat = 'all') {
+function renderDashboard(filterCat = 'all') {
             const dashFilter = document.getElementById('dashCategoryFilter');
             
             // 🌟 ไม่รวม "ไม่ใช้งาน" ใน Dashboard
@@ -729,6 +750,94 @@
                     cutout: '60%'
                 }
             });
+
+            const checkouts = transactionItems.filter(t => {
+                if (t.type !== 'เบิก' || t.status !== 'สำเร็จ') return false;
+                const invItem = inventoryItems.find(i => String(i.itemId) === String(t.itemId));
+                const itemCat = invItem ? (invItem.category ? invItem.category.trim() : 'ทั่วไป') : 'ทั่วไป';
+                
+                if (itemCat === 'ไม่ใช้งาน') return false;
+                if (filterCat !== 'all' && itemCat !== filterCat) return false;
+                
+                return true;
+            });
+            
+            const last7Days = [];
+            for(let i=6; i>=0; i--) {
+                const d = new Date();
+                d.setDate(d.getDate() - i);
+                last7Days.push(d.toLocaleDateString('th-TH', {day:'numeric', month:'short'}));
+            }
+            
+            const dailyCounts = new Array(7).fill(0);
+            checkouts.forEach(t => {
+                const d = new Date(t.timestamp);
+                const dateStr = d.toLocaleDateString('th-TH', {day:'numeric', month:'short'});
+                const index = last7Days.indexOf(dateStr);
+                if(index > -1) {
+                    dailyCounts[index] += (parseInt(t.quantity) || 0); 
+                }
+            });
+
+            if (dashLineChart) dashLineChart.destroy();
+            const ctxLine = document.getElementById('lineChart').getContext('2d');
+            dashLineChart = new Chart(ctxLine, {
+                type: 'line',
+                data: {
+                    labels: last7Days,
+                    datasets: [{
+                        label: 'จำนวนพัสดุที่เบิก (ชิ้น/หน่วย)',
+                        data: dailyCounts,
+                        borderColor: '#3B82F6', 
+                        backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.3,
+                        pointBackgroundColor: '#1D4ED8',
+                        pointRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false }, title: { display: true, text: filterCat === 'all' ? 'สถิติยอดเบิกพัสดุรายวัน (7 วันย้อนหลัง)' : `สถิติยอดเบิกพัสดุ "${filterCat}" (7 วันย้อนหลัง)`, font: { family: 'Inter', size: 14 } } },
+                    scales: { y: { beginAtZero: true }, x: { ticks: { font: { family: 'Inter', size: 10 } } } }
+                }
+            });
+
+            const userMap = {};
+            checkouts.forEach(t => {
+                userMap[t.userName] = (userMap[t.userName] || 0) + (parseInt(t.quantity) || 0);
+            });
+            
+            const sortedUsers = Object.entries(userMap).sort((a,b) => b[1] - a[1]).slice(0, 5);
+            const userLabels = sortedUsers.map(u => u[0].length > 15 ? u[0].substring(0, 15) + '...' : u[0]);
+            const userDataCounts = sortedUsers.map(u => u[1]);
+
+            if (dashUserChart) dashUserChart.destroy();
+            const ctxUser = document.getElementById('userChart').getContext('2d');
+            dashUserChart = new Chart(ctxUser, {
+                type: 'bar',
+                data: {
+                    labels: userLabels,
+                    datasets: [{
+                        label: 'จำนวนพัสดุที่เบิก (ชิ้น/หน่วย)',
+                        data: userDataCounts,
+                        backgroundColor: '#10B981', 
+                        hoverBackgroundColor: '#059669',
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    indexAxis: 'y', 
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false }, title: { display: true, text: filterCat === 'all' ? 'ผู้ใช้งานที่เบิกพัสดุเยอะที่สุด (Top 5)' : `ผู้เบิก "${filterCat}" เยอะที่สุด (Top 5)`, font: { family: 'Inter', size: 14 } } },
+                    scales: { x: { beginAtZero: true }, y: { ticks: { font: { family: 'Inter', size: 11 } } } }
+                }
+            });
+
+            // 🌟 คำสั่งใหม่! ให้วาดรายการใกล้หมดไปพร้อมกับการวาด Dashboard
+            renderLowStock(filterCat);
+        }
 
             // ==========================================
             // 🌟 3. กราฟเส้น (Line Chart) - สถิติการเบิกพัสดุรวมรายวัน (7 วันย้อนหลัง)
@@ -1180,27 +1289,35 @@
             } catch (error) { hideLoading(); showError('เชื่อมต่อระบบล้มเหลว'); }
         }
 
-        async function fetchLowStock() {
+function renderLowStock(filterCat = 'all') {
             const listDiv = document.getElementById('lowStockList');
-            listDiv.innerHTML = '<p class="text-center text-sm text-gray-500">กำลังโหลด...</p>';
-            try {
-                const response = await fetch(`${GAS_URL}?action=getLowStock`);
-                const result = await response.json();
-                if (result.status === 'success' && result.data.length > 0) {
-                    
-                    // 🌟 กรอง "ไม่ใช้งาน" ออกจากการแจ้งเตือนใกล้หมด
-                    const filteredLowStock = result.data.filter(item => {
-                        const invItem = inventoryItems.find(i => String(i.itemId) === String(item.itemId));
-                        return !(invItem && (invItem.category ? invItem.category.trim() : '') === 'ไม่ใช้งาน');
-                    });
+            if (!listDiv) return;
 
-                    if (filteredLowStock.length > 0) {
-                        listDiv.innerHTML = filteredLowStock.map(item => `<div class="flex justify-between border-b py-2 items-center cursor-pointer hover:bg-red-100 transition px-2 rounded -mx-2" onclick="fillStockFromLowStock('${item.itemId}')" title="คลิกเพื่อเติมข้อมูลพัสดุนี้"><span class="font-bold text-sm">${item.itemName}</span><span class="text-xs bg-white text-red-600 px-2 py-1 rounded font-bold whitespace-nowrap ml-2 border border-red-200 shadow-sm">เหลือ ${item.stockQuantity}</span></div>`).join('');
-                    } else { 
-                        listDiv.innerHTML = '<p class="text-center text-sm text-green-600 mt-4">ไม่มีพัสดุใกล้หมด ✅</p>'; 
-                    }
-                } else { listDiv.innerHTML = '<p class="text-center text-sm text-green-600 mt-4">ไม่มีพัสดุใกล้หมด ✅</p>'; }
-            } catch (error) { listDiv.innerHTML = '<p class="text-red-500 text-sm">โหลดข้อมูลไม่สำเร็จ</p>'; }
+            // 🌟 1. กรองข้อมูลจาก inventoryItems (หน้าเว็บ) โดยตรง
+            const filteredLowStock = inventoryItems.filter(item => {
+                const itemCat = item.category ? item.category.trim() : 'ทั่วไป';
+                
+                // กรองหมวด "ไม่ใช้งาน" ทิ้ง
+                if (itemCat === 'ไม่ใช้งาน') return false;
+                
+                // กรองให้ตรงกับ Dropdown หมวดหมู่ที่แอดมินเลือก
+                if (filterCat !== 'all' && itemCat !== filterCat) return false;
+                
+                // คัดมาเฉพาะรายการที่จำนวนคงเหลือน้อยกว่าหรือเท่ากับจุดแจ้งเตือน
+                return item.stockQuantity <= item.minimumStock;
+            });
+
+            // 🌟 2. แสดงผลบนหน้าจอ
+            if (filteredLowStock.length > 0) {
+                listDiv.innerHTML = filteredLowStock.map(item => `
+                    <div class="flex justify-between border-b py-2 items-center cursor-pointer hover:bg-red-100 transition px-2 rounded -mx-2" onclick="fillStockFromLowStock('${item.itemId}')" title="คลิกเพื่อเติมข้อมูลพัสดุนี้">
+                        <span class="font-bold text-sm">${item.itemName}</span>
+                        <span class="text-xs bg-white text-red-600 px-2 py-1 rounded font-bold whitespace-nowrap ml-2 border border-red-200 shadow-sm">เหลือ ${item.stockQuantity}</span>
+                    </div>
+                `).join('');
+            } else { 
+                listDiv.innerHTML = '<p class="text-center text-sm text-green-600 mt-4">ไม่มีพัสดุใกล้หมดในหมวดหมู่นี้ ✅</p>'; 
+            }
         }
 
         function showError(msg) { Swal.fire({ icon: 'error', title: 'แจ้งเตือน', text: msg, confirmButtonColor: '#545859' }); }
