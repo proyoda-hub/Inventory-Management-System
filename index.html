@@ -40,23 +40,15 @@
         /* 🌟 CSS พิเศษสำหรับจัดรูปแบบตอนเซฟเป็น PDF (Print Mode) */
         @media print {
             body { background-color: white !important; }
-            
-            /* ซ่อนส่วนที่ไม่อยากให้ออกใน PDF (เมนู, ฟอร์มแอดมิน, ปุ่มต่างๆ) */
             nav, #loading, #userView, #cartBar { display: none !important; }
             #adminView > .flex, #adminView > .bg-white.mb-6, #adminView > .grid { display: none !important; }
             #adminView > .bg-white.mt-6 > h3, #adminView > .bg-white.mt-6 > .grid { display: none !important; }
             #reportPreviewContainer button { display: none !important; }
-
-            /* ล้างการตั้งค่ากล่องที่ทำให้ตารางแหว่งหาย */
             #adminView { padding: 0 !important; max-width: 100% !important; }
             #adminView > .bg-white.mt-6 { padding: 0 !important; margin: 0 !important; box-shadow: none !important; }
             .overflow-x-auto { overflow: visible !important; border: none !important; background: transparent !important; padding: 0 !important; box-shadow: none !important; }
-            
-            /* จัดหน้ากระดาษรายงานให้เต็ม 100% */
             #reportPreviewContainer { display: block !important; width: 100% !important; margin: 0 !important; }
             #reportPaper { width: 100% !important; margin: 0 !important; padding: 0 !important; box-shadow: none !important; border: none !important; }
-            
-            /* บังคับให้พิมพ์สี Background ของตาราง (ป้องกันตารางขาวล้วน) */
             * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
             @page { margin: 15mm; size: A4 portrait; }
         }
@@ -297,7 +289,6 @@
         </div>
     </main>
 
-    <!-- 🌟 เพิ่ม Footer ตรงนี้ -->
     <footer class="text-center text-xs font-semibold text-gray-400 mt-8 mb-6 pb-6 w-full print:hidden">
         © 2026 Chatchai Saeheng email: 
         <a href="mailto:chatchsa@ntplc.co.th" class="hover:text-primary transition underline decoration-gray-300 underline-offset-2">
@@ -305,7 +296,6 @@
         </a>
     </footer>
 
-    <!-- LIFF SDK -->
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script>
         // ==========================================
@@ -421,6 +411,21 @@
                 
                 if (result.status === 'success') {
                     inventoryItems = result.data;
+                    
+                    // 🌟 เพิ่มลอจิกตรวจสอบ Parameter ลิงก์คีย์เวิร์ดพิเศษ (เช่น ?cat=OFC)
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const targetCat = urlParams.get('cat');
+                    
+                    // ตรวจสอบว่าหมวดหมู่ที่สั่งมา มีอยู่จริงในระบบหรือไม่
+                    if (targetCat) {
+                        const catExists = inventoryItems.some(item => item.category && item.category.trim().toLowerCase() === targetCat.trim().toLowerCase());
+                        if (catExists) {
+                            // หาชื่อตัวพิมพ์เล็ก-ใหญ่ที่ถูกต้องตาม Sheets
+                            const matchedItem = inventoryItems.find(item => item.category && item.category.trim().toLowerCase() === targetCat.trim().toLowerCase());
+                            currentCategory = matchedItem.category.trim();
+                        }
+                    }
+
                     renderCategoryTabs();
                     renderItems();
                     
@@ -431,7 +436,6 @@
                         document.getElementById('userView').classList.remove('hide');
                         if(Object.keys(cart).length > 0) document.getElementById('cartBar').classList.remove('hide');
                     } else {
-                        // 🌟 ดึงค่าตัวกรองปัจจุบันมาใช้งาน
                         const currentFilter = document.getElementById('dashCategoryFilter') ? document.getElementById('dashCategoryFilter').value : 'all';
                         renderDashboard(currentFilter);
                     }
@@ -456,8 +460,6 @@
                 cartBar.classList.add('hide');
                 adminView.classList.remove('hide');
                 
-                // 🌟 แก้ไข: นำ fetchLowStock(); ออกไป เพราะเราเอาไปไว้ใน renderDashboard แล้ว
-                // 🌟 ดึงค่าตัวกรองปัจจุบันมาใช้งาน
                 const currentFilter = document.getElementById('dashCategoryFilter').value || 'all';
                 fetchTransactions(); 
                 renderDashboard(currentFilter);
@@ -678,7 +680,6 @@
                     transactionItems = result.data;
                     populateUserFilter(); 
                     
-                    // 🌟 อัปเดต Dashboard ใหม่อีกครั้งเมื่อโหลดประวัติการเบิกเสร็จ
                     if (!document.getElementById('adminView').classList.contains('hide')) {
                         const dashFilter = document.getElementById('dashCategoryFilter');
                         renderDashboard(dashFilter ? dashFilter.value : 'all');
@@ -690,7 +691,6 @@
         function renderDashboard(filterCat = 'all') {
             const dashFilter = document.getElementById('dashCategoryFilter');
             
-            // 🌟 ไม่รวม "ไม่ใช้งาน" ใน Dashboard
             const activeItems = inventoryItems.filter(item => (item.category ? item.category.trim() : '') !== 'ไม่ใช้งาน');
             const uniqueCats = [...new Set(activeItems.map(i => i.category || 'ทั่วไป'))];
             
@@ -837,7 +837,6 @@
                 }
             });
 
-            // 🌟 คำสั่งใหม่! ให้วาดรายการใกล้หมดไปพร้อมกับการวาด Dashboard
             renderLowStock(filterCat);
         }
 
@@ -875,7 +874,6 @@
             const title = document.getElementById('reportTitle');
             const subtitle = document.getElementById('reportSubtitle');
 
-            // 🌟 ไม่รวมรายการ "ไม่ใช้งาน" มาใน Report
             const activeInventoryItems = inventoryItems.filter(item => (item.category ? item.category.trim() : '') !== 'ไม่ใช้งาน');
 
             thead.innerHTML = ''; tbody.innerHTML = '';
@@ -892,7 +890,6 @@
             } else if (type === 'user' || type === 'date') {
                 title.textContent = type === 'user' ? 'รายงานประวัติการเบิกพัสดุ (รายบุคคล)' : 'รายงานประวัติการเบิกพัสดุ (ตามช่วงเวลา)';
                 
-                // 🌟 กรองประวัติที่เป็นของ "ไม่ใช้งาน" ออก
                 let filteredTxns = transactionItems.filter(t => {
                     if (t.type !== 'เบิก' || t.status !== 'สำเร็จ') return false;
                     const invItem = inventoryItems.find(i => String(i.itemId) === String(t.itemId));
@@ -982,8 +979,8 @@
             const itemIdInput = document.getElementById('add_itemId').value.trim();
             const itemNameInput = document.getElementById('add_itemName').value.trim();
 
-            if (trigger === 'id' && itemIdInput) selectedItem = inventoryItems.find(i => String(i.itemId) === itemIdInput);
-            else if (trigger === 'name' && itemNameInput) selectedItem = inventoryItems.find(i => String(i.itemName) === itemNameInput);
+            if (trigger === 'id' && itemIdInput) selectedItem = inventoryItems.find(i => String(i.itemId) === String(itemIdInput).trim());
+            else if (trigger === 'name' && itemNameInput) selectedItem = inventoryItems.find(i => String(i.itemName).trim() === itemNameInput);
 
             const stockHint = document.getElementById('currentStockHint');
             if (selectedItem) {
@@ -1004,7 +1001,6 @@
             const tabsContainer = document.getElementById('categoryTabs');
             let uniqueCategories = [...new Set(inventoryItems.map(item => item.category ? item.category.trim() : 'ทั่วไป'))];
             
-            // 🌟 ซ่อนแท็บ "ไม่ใช้งาน" สำหรับผู้ใช้ทั่วไป (Admin ยังเห็นได้)
             if (userRole !== 'Admin') {
                 uniqueCategories = uniqueCategories.filter(c => c !== 'ไม่ใช้งาน');
             }
@@ -1025,7 +1021,6 @@
             const filteredItems = inventoryItems.filter(item => {
                 const itemCat = item.category ? item.category.trim() : 'ทั่วไป';
                 
-                // 🌟 ตรวจสอบสิทธิ์ (ถ้าไม่ใช่ Admin ห้ามเห็น "ไม่ใช้งาน")
                 if (userRole !== 'Admin' && itemCat === 'ไม่ใช้งาน') return false;
 
                 const matchCategory = (currentCategory === 'ทั้งหมด') || (itemCat === currentCategory);
@@ -1162,61 +1157,17 @@
             } catch (error) { hideLoading(); showError('ไม่สามารถเชื่อมต่อได้: ' + error.message); }
         }
 
-        function toggleAdminMode() {
-            const userView = document.getElementById('userView');
-            const adminView = document.getElementById('adminView');
-            const cartBar = document.getElementById('cartBar');
-
-            if (userView.classList.contains('hide')) {
-                adminView.classList.add('hide');
-                userView.classList.remove('hide');
-                updateCartSummary(); 
-            } else {
-                userView.classList.add('hide');
-                cartBar.classList.add('hide');
-                adminView.classList.remove('hide');
-                
-                // 🌟 ดึงค่าตัวกรองปัจจุบันมาใช้งาน
-                const currentFilter = document.getElementById('dashCategoryFilter').value || 'all';
-                fetchTransactions(); 
-                renderDashboard(currentFilter);
-            }
-        }
-
-        async function handleAddStock(e) {
-            e.preventDefault();
-            const payload = { action: 'addStock', item: { itemId: document.getElementById('add_itemId').value, itemName: document.getElementById('add_itemName').value, category: document.getElementById('add_category').value || 'ทั่วไป', quantity: document.getElementById('add_qty').value, minimumStock: document.getElementById('add_min').value || 5, unit: document.getElementById('add_unit').value || 'ชิ้น', adminId: currentUser.userId } };
-            showLoading('กำลังบันทึกข้อมูลนำเข้า...');
-            try {
-                const response = await fetch(GAS_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(payload) });
-                const result = await response.json();
-                hideLoading();
-                if (result.status === 'success') {
-                    Swal.fire('สำเร็จ', 'บันทึกการนำเข้าพัสดุเรียบร้อย', 'success');
-                    clearAddStockForm(); loadItems(); 
-                } else { Swal.fire('ผิดพลาด', result.message, 'error'); }
-            } catch (error) { hideLoading(); showError('เชื่อมต่อระบบล้มเหลว'); }
-        }
-
         function renderLowStock(filterCat = 'all') {
             const listDiv = document.getElementById('lowStockList');
             if (!listDiv) return;
 
-            // 🌟 1. กรองข้อมูลจาก inventoryItems (หน้าเว็บ) โดยตรง
             const filteredLowStock = inventoryItems.filter(item => {
                 const itemCat = item.category ? item.category.trim() : 'ทั่วไป';
-                
-                // กรองหมวด "ไม่ใช้งาน" ทิ้ง
                 if (itemCat === 'ไม่ใช้งาน') return false;
-                
-                // กรองให้ตรงกับ Dropdown หมวดหมู่ที่แอดมินเลือก
                 if (filterCat !== 'all' && itemCat !== filterCat) return false;
-                
-                // คัดมาเฉพาะรายการที่จำนวนคงเหลือน้อยกว่าหรือเท่ากับจุดแจ้งเตือน
                 return item.stockQuantity <= item.minimumStock;
             });
 
-            // 🌟 2. แสดงผลบนหน้าจอ
             if (filteredLowStock.length > 0) {
                 listDiv.innerHTML = filteredLowStock.map(item => `
                     <div class="flex justify-between border-b py-2 items-center cursor-pointer hover:bg-red-100 transition px-2 rounded -mx-2" onclick="fillStockFromLowStock('${item.itemId}')" title="คลิกเพื่อเติมข้อมูลพัสดุนี้">
