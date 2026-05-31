@@ -997,6 +997,7 @@
             } else { stockHint.classList.add('hide'); }
         }
 
+        // 🌟 อัปเดตฟังก์ชันนี้ ให้เลื่อนแท็บที่เลือกมาตรงกลางจออัตโนมัติ
         function renderCategoryTabs() {
             const tabsContainer = document.getElementById('categoryTabs');
             let uniqueCategories = [...new Set(inventoryItems.map(item => item.category ? item.category.trim() : 'ทั่วไป'))];
@@ -1006,10 +1007,24 @@
             }
 
             const allCategories = ['ทั้งหมด', ...uniqueCategories.filter(c => c !== '')];
+            
             tabsContainer.innerHTML = allCategories.map(cat => {
                 const isActive = currentCategory === cat;
-                return `<button onclick="setCategory('${cat}')" class="snap-start px-4 py-1.5 rounded-full text-sm font-bold whitespace-nowrap transition-all duration-200 shadow-sm ${isActive ? 'bg-dark text-highlight scale-105' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-100'}">${cat}</button>`;
+                // 🌟 เพิ่ม ID พิเศษให้ปุ่มที่กำลังถูกเลือก เพื่อให้ JavaScript หาเจอ
+                const activeIdAttr = isActive ? 'id="activeCategoryTab"' : '';
+                
+                return `<button ${activeIdAttr} onclick="setCategory('${cat}')" class="snap-start px-4 py-1.5 rounded-full text-sm font-bold whitespace-nowrap transition-all duration-200 shadow-sm ${isActive ? 'bg-dark text-highlight scale-105' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-100'}">${cat}</button>`;
             }).join('');
+
+            // 🌟 คำสั่งเลื่อนหน้าจอไปยังแท็บที่เลือก (หน่วงเวลาเล็กน้อยให้วาดปุ่มเสร็จก่อน)
+            setTimeout(() => {
+                const activeTab = document.getElementById('activeCategoryTab');
+                if (activeTab) {
+                    // inline: 'center' คือบังคับให้อยู่ตรงกลางแนวนอน
+                    // block: 'nearest' คือป้องกันไม่ให้หน้าจอกระตุกในแนวตั้ง
+                    activeTab.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                }
+            }, 100);
         }
 
         function setCategory(cat) { currentCategory = cat; renderCategoryTabs(); renderItems(); }
