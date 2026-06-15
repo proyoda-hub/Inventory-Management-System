@@ -924,7 +924,37 @@
         }
 
         function exportCurrentReportToPDF() {
-            window.print();
+            // 1. ตรวจสอบว่าใช้งานผ่านแอป LINE อยู่หรือไม่
+            if (typeof liff !== 'undefined' && liff.isInClient()) {
+                Swal.fire({
+                    icon: 'info',
+                    title: 'ข้อจำกัดของแอป LINE',
+                    text: 'เพื่อใช้งานฟังก์ชันพิมพ์หรือเซฟ PDF กรุณากดไอคอน 3 จุด (หรือไอคอนแชร์) ที่มุมขวา/ล่างของหน้าจอ แล้วเลือก "เปิดด้วยเบราว์เซอร์เริ่มต้น" (Open in Safari / Chrome) ก่อนนะครับ',
+                    confirmButtonColor: '#545859',
+                    confirmButtonText: 'เข้าใจแล้ว'
+                });
+                return; // หยุดการทำงาน ไม่เรียกคำสั่งพิมพ์
+            }
+
+            // 2. สำหรับ iOS Safari / เบราว์เซอร์ปกติ
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+            
+            if (isIOS) {
+                // บน iOS การหน่วงเวลาเล็กน้อยจะช่วยให้ Safari จัดการหน้า Print ได้สมบูรณ์ขึ้นและไม่ค้าง
+                Swal.fire({
+                    title: 'กำลังเตรียมเอกสาร...',
+                    timer: 800,
+                    showConfirmButton: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                }).then(() => {
+                    window.print();
+                });
+            } else {
+                // สำหรับ PC หรือ Android เรียกใช้ได้ทันที
+                window.print();
+            }
         }
 
         function getDropdownData(fieldId) {
