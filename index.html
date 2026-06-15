@@ -43,7 +43,6 @@
             nav, #loading, #userView, #cartBar, footer { display: none !important; }
             #adminView > .flex, #adminTabMenu { display: none !important; }
             
-            /* บังคับซ่อนแท็บอื่น เปิดแค่ Report */
             #adminTabDashboard, #adminTabUsers { display: none !important; }
             #adminTabReport { display: block !important; margin: 0 !important; padding: 0 !important; }
             
@@ -81,20 +80,44 @@
     </div>
 
     <main id="userView" class="p-4 max-w-4xl mx-auto hide">
-        <div class="flex justify-between items-end mb-4 border-b-2 border-highlight pb-1">
-            <h2 class="text-xl font-bold text-primary">รายการพัสดุ</h2>
+        <div class="flex justify-between items-end mb-2 border-b-2 border-highlight pb-1">
+            <h2 class="text-xl font-bold text-primary">ใช้งานระบบ</h2>
         </div>
 
-        <div class="mb-5 space-y-3 sticky top-[60px] z-40 bg-gray-100 pt-2 pb-2">
-            <div class="relative">
-                <input type="text" id="searchInput" onkeyup="handleSearch(this.value)" placeholder="ค้นหาชื่อ หรือ รหัสพัสดุ..." 
-                    class="w-full pl-10 pr-4 py-2.5 border-none rounded-xl bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-highlight text-sm font-semibold">
-                <span class="absolute left-3 top-2.5 text-xl">🔍</span>
+        <div id="userTabMenu" class="flex space-x-2 mb-4 border-b-2 border-gray-200 overflow-x-auto scrollbar-hide">
+            <button onclick="switchUserTab('items')" id="btnUserTabItems" class="user-tab-btn active px-4 py-3 font-bold text-sm border-b-4 border-highlight text-dark transition whitespace-nowrap">
+                📦 เบิกพัสดุ
+            </button>
+            <button onclick="switchUserTab('history')" id="btnUserTabHistory" class="user-tab-btn px-4 py-3 font-bold text-sm border-b-4 border-transparent text-gray-500 hover:text-dark transition whitespace-nowrap">
+                🕒 ประวัติของฉัน
+            </button>
+        </div>
+
+        <div id="userTabItems" class="user-tab-content block">
+            <div class="mb-5 space-y-3 sticky top-[60px] z-40 bg-gray-100 pt-2 pb-2">
+                <div class="relative">
+                    <input type="text" id="searchInput" onkeyup="handleSearch(this.value)" placeholder="ค้นหาชื่อ หรือ รหัสพัสดุ..." 
+                        class="w-full pl-10 pr-4 py-2.5 border-none rounded-xl bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-highlight text-sm font-semibold">
+                    <span class="absolute left-3 top-2.5 text-xl">🔍</span>
+                </div>
+                <div id="categoryTabs" class="flex overflow-x-auto gap-2 pb-1 scrollbar-hide snap-x"></div>
             </div>
-            <div id="categoryTabs" class="flex overflow-x-auto gap-2 pb-1 scrollbar-hide snap-x"></div>
+
+            <div id="itemList" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
         </div>
 
-        <div id="itemList" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
+        <div id="userTabHistory" class="user-tab-content hide">
+            <div class="bg-white p-5 rounded-2xl shadow">
+                <div class="flex justify-between items-center mb-4 border-b border-gray-100 pb-3">
+                    <h3 class="font-bold text-lg text-dark flex items-center gap-2">🕒 ประวัติการเบิกพัสดุ</h3>
+                    <button onclick="showLoading('กำลังอัปเดต...'); fetchTransactions().then(()=>{ hideLoading(); renderMyHistory();})" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-lg transition font-bold border border-gray-200 shadow-sm flex items-center gap-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg> รีเฟรช
+                    </button>
+                </div>
+                <div id="myHistoryList" class="space-y-3 max-h-[65vh] overflow-y-auto pr-2 scrollbar-hide">
+                    </div>
+            </div>
+        </div>
     </main>
 
     <div id="cartBar" class="fixed bottom-0 left-0 w-full bg-primary text-white p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] flex justify-between items-center z-40 rounded-t-2xl hide">
@@ -415,6 +438,10 @@
                 
                 if (data.status === 'success') {
                     userRole = data.role;
+                    
+                    // 🌟 เพื่อให้ผู้ใช้ทั่วไปดูประวัติได้ จึงทำการดึง Transaction ทุกครั้งที่ Login
+                    fetchTransactions();
+
                     if (userRole === 'Admin') {
                         const adminBtn = document.getElementById('adminBtn');
                         adminBtn.classList.remove('hide');
@@ -426,8 +453,6 @@
                             adminBtn.innerHTML = 'Admin';
                             adminBtn.classList.remove('relative');
                         }
-
-                        fetchTransactions(); 
                     }
                     await loadItems();
                 } else {
@@ -491,6 +516,7 @@
             if (userView.classList.contains('hide')) {
                 adminView.classList.add('hide');
                 userView.classList.remove('hide');
+                switchUserTab('items'); // 🌟 กลับสู่โหมดผู้ใช้ ให้สลับแท็บไปที่หน้าเบิกของเสมอ
                 updateCartSummary(); 
             } else {
                 userView.classList.add('hide');
@@ -501,14 +527,83 @@
                 fetchTransactions(); 
                 fetchUsers(); 
                 renderDashboard(currentFilter);
-                
-                // 🌟 รีเซ็ตให้กลับมาแท็บ Dashboard ทุกครั้งที่กดเข้าโหมดแอดมิน
                 switchAdminTab('dashboard');
             }
         }
 
         // ==========================================
-        // 🌟 ระบบสลับแท็บเมนูแอดมิน (Tab Switcher)
+        // 🌟 ระบบสลับแท็บฝั่งผู้ใช้ (User Tabs)
+        // ==========================================
+        function switchUserTab(tabName) {
+            document.querySelectorAll('.user-tab-content').forEach(el => {
+                el.classList.add('hide');
+                el.classList.remove('block');
+            });
+            
+            document.querySelectorAll('.user-tab-btn').forEach(el => {
+                el.classList.remove('border-highlight', 'text-dark');
+                el.classList.add('border-transparent', 'text-gray-500');
+            });
+
+            const targetContent = document.getElementById(`userTab${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`);
+            if(targetContent) {
+                targetContent.classList.remove('hide');
+                targetContent.classList.add('block');
+            }
+
+            const targetBtn = document.getElementById(`btnUserTab${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`);
+            if(targetBtn) {
+                targetBtn.classList.remove('border-transparent', 'text-gray-500');
+                targetBtn.classList.add('border-highlight', 'text-dark');
+            }
+
+            if(tabName === 'history') {
+                document.getElementById('cartBar').classList.add('hide');
+                renderMyHistory(); // โหลดรายการประวัติ
+            } else {
+                updateCartSummary(); // กลับไปหน้ารายการของ ให้แสดงตะกร้า(ถ้ามี)
+            }
+        }
+
+        function renderMyHistory() {
+            const container = document.getElementById('myHistoryList');
+            if(!container) return;
+
+            // คัดกรองเฉพาะรายการที่เป็นของ currentUser และเป็นประเภท 'เบิก'
+            const myTxns = transactionItems.filter(t => t.userId === currentUser.userId && t.type === 'เบิก');
+            
+            if (myTxns.length === 0) {
+                container.innerHTML = `<div class="text-center text-gray-500 py-10 bg-gray-50 rounded-xl border border-dashed border-gray-300">
+                    <div class="text-3xl mb-2">📭</div>
+                    <div class="font-bold text-sm">ยังไม่มีประวัติการเบิกพัสดุ</div>
+                </div>`;
+                return;
+            }
+
+            // เรียงลำดับจากใหม่สุดไปเก่าสุด
+            myTxns.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+            container.innerHTML = myTxns.map(t => {
+                return `
+                    <div class="border border-gray-200 rounded-xl p-3 hover:bg-gray-50 transition flex justify-between items-center shadow-sm bg-white">
+                        <div>
+                            <div class="font-bold text-dark text-sm leading-tight">${t.itemName}</div>
+                            <div class="text-[10px] text-gray-400 font-mono mt-0.5">${t.itemId}</div>
+                            <div class="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                                📅 ${formatDateTh(t.timestamp)}
+                            </div>
+                        </div>
+                        <div class="text-right flex flex-col items-end">
+                            <div class="font-black text-primary text-base">${t.quantity} <span class="text-xs font-normal">${t.unit}</span></div>
+                            <div class="text-[10px] text-green-700 bg-green-100 px-2 py-0.5 rounded font-bold mt-1 border border-green-200">✅ ${t.status}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // ==========================================
+        // 🌟 ระบบสลับแท็บฝั่ง Admin
         // ==========================================
         function switchAdminTab(tabName) {
             document.querySelectorAll('.admin-tab-content').forEach(el => {
@@ -741,6 +836,8 @@
                     if (!document.getElementById('adminView').classList.contains('hide')) {
                         const dashFilter = document.getElementById('dashCategoryFilter');
                         renderDashboard(dashFilter ? dashFilter.value : 'all');
+                    } else if (document.getElementById('userTabHistory').classList.contains('block')) {
+                        renderMyHistory(); // อัปเดตประวัติหน้าผู้ใช้ถ้าเปิดแท็บนั้นอยู่
                     }
                 }
             } catch (error) { console.error("ดึงข้อมูลประวัติไม่สำเร็จ", error); }
@@ -1056,7 +1153,7 @@
             const userView = document.getElementById('userView');
             if (!userView.classList.contains('hide')) toggleAdminMode();
             setTimeout(() => { 
-                switchAdminTab('dashboard'); // เด้งมาแท็บนำเข้าอัตโนมัติ
+                switchAdminTab('dashboard'); 
                 fillStockFromLowStock(itemId); 
             }, 150);
         }
@@ -1249,7 +1346,15 @@
                 hideLoading();
                 if (result.status === 'success') {
                     cart = {}; updateCartSummary();
-                    Swal.fire('สำเร็จ!', 'บันทึกการเบิกพัสดุเรียบร้อยแล้วระบบได้แจ้งเตือนไปที่ LINE ของคุณ', 'success').then(() => { fetchTransactions(); loadItems(); });
+                    Swal.fire('สำเร็จ!', 'บันทึกการเบิกพัสดุเรียบร้อยแล้วระบบได้แจ้งเตือนไปที่ LINE ของคุณ', 'success').then(() => { 
+                        // 🌟 โหลดข้อมูลประวัติใหม่เพื่อให้อัปเดตในแท็บประวัติของฉัน
+                        fetchTransactions().then(() => {
+                            if(document.getElementById('userTabHistory').classList.contains('block')) {
+                                renderMyHistory();
+                            }
+                        }); 
+                        loadItems(); 
+                    });
                 } else { Swal.fire('เกิดข้อผิดพลาด', result.message, 'error'); }
             } catch (error) { hideLoading(); showError('ไม่สามารถเชื่อมต่อได้: ' + error.message); }
         }
@@ -1293,7 +1398,6 @@
                     const pendingCount = allUsers.filter(u => u.status === 'Pending').length;
                     const adminBtn = document.getElementById('adminBtn');
                     
-                    // เพิ่ม Badge ให้ปุ่มกลับหน้าแรก ถ้าอยู่ในโหมดแอดมินแล้วมีคนรอ
                     const adminTabUserBtn = document.getElementById('btnTabUsers');
                     if(adminTabUserBtn) {
                         if (pendingCount > 0) {
