@@ -7,7 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
+    
     <script>
         tailwind.config = {
             theme: {
@@ -25,7 +25,7 @@
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
         body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
         .hide { display: none !important; }
-
+        
         input[type="number"]::-webkit-inner-spin-button,
         input[type="number"]::-webkit-outer-spin-button {
             -webkit-appearance: none; margin: 0;
@@ -34,7 +34,7 @@
 
         .scrollbar-hide::-webkit-scrollbar { display: none; }
         .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
-
+        
         .swal-image-modal { padding: 1em !important; border-radius: 1.5rem !important; }
 
         /* 🌟 CSS พิเศษสำหรับจัดรูปแบบตอนเซฟเป็น PDF (Print Mode) */
@@ -42,15 +42,14 @@
             body { background-color: white !important; }
             nav, #loading, #userView, #cartBar, footer { display: none !important; }
             #adminView > .flex, #adminTabMenu { display: none !important; }
-
-            /* บังคับซ่อนแท็บอื่น เปิดแค่ Report */
+            
             #adminTabDashboard, #adminTabUsers { display: none !important; }
             #adminTabReport { display: block !important; margin: 0 !important; padding: 0 !important; }
-
+            
             #adminTabReport > .bg-white { padding: 0 !important; margin: 0 !important; box-shadow: none !important; }
             #adminTabReport > .bg-white > h3, #adminTabReport > .bg-white > .grid { display: none !important; }
             #reportPreviewContainer button { display: none !important; }
-
+            
             #adminView { padding: 0 !important; max-width: 100% !important; }
             .overflow-x-auto { overflow: visible !important; border: none !important; background: transparent !important; padding: 0 !important; box-shadow: none !important; }
             #reportPreviewContainer { display: block !important; width: 100% !important; margin: 0 !important; }
@@ -81,17 +80,10 @@
     </div>
 
     <main id="userView" class="p-4 max-w-4xl mx-auto hide">
-        <div class="flex justify-between items-end mb-4 border-b-2 border-highlight pb-1">
-            <h2 class="text-xl font-bold text-primary">รายการพัสดุ</h2>
         <div class="flex justify-between items-end mb-2 border-b-2 border-highlight pb-1">
             <h2 class="text-xl font-bold text-primary">ใช้งานระบบ</h2>
         </div>
 
-        <div class="mb-5 space-y-3 sticky top-[60px] z-40 bg-gray-100 pt-2 pb-2">
-            <div class="relative">
-                <input type="text" id="searchInput" onkeyup="handleSearch(this.value)" placeholder="ค้นหาชื่อ หรือ รหัสพัสดุ..." 
-                    class="w-full pl-10 pr-4 py-2.5 border-none rounded-xl bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-highlight text-sm font-semibold">
-                <span class="absolute left-3 top-2.5 text-xl">🔍</span>
         <div id="userTabMenu" class="flex space-x-2 mb-4 border-b-2 border-gray-200 overflow-x-auto scrollbar-hide">
             <button onclick="switchUserTab('items')" id="btnUserTabItems" class="user-tab-btn active px-4 py-3 font-bold text-sm border-b-4 border-highlight text-dark transition whitespace-nowrap">
                 📦 เบิกพัสดุ
@@ -100,6 +92,7 @@
                 🕒 ประวัติของฉัน
             </button>
         </div>
+
         <div id="userTabItems" class="user-tab-content block">
             <div class="mb-5 space-y-3 sticky top-[60px] z-40 bg-gray-100 pt-2 pb-2">
                 <div class="relative">
@@ -109,11 +102,10 @@
                 </div>
                 <div id="categoryTabs" class="flex overflow-x-auto gap-2 pb-1 scrollbar-hide snap-x"></div>
             </div>
-            <div id="categoryTabs" class="flex overflow-x-auto gap-2 pb-1 scrollbar-hide snap-x"></div>
+
             <div id="itemList" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
         </div>
 
-        <div id="itemList" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
         <div id="userTabHistory" class="user-tab-content hide">
             <div class="bg-white p-5 rounded-2xl shadow">
                 <div class="flex justify-between items-center mb-4 border-b border-gray-100 pb-3">
@@ -273,7 +265,7 @@
         <div id="adminTabReport" class="admin-tab-content hide">
             <div class="bg-white p-5 rounded-2xl shadow">
                 <h3 class="font-bold text-lg mb-4 text-dark flex items-center gap-2">📊 ระบบออกรายงาน (Report)</h3>
-
+                
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 bg-gray-50 p-4 rounded-xl border border-gray-200">
                     <div>
                         <label class="text-sm text-gray-600 block mb-1 font-bold">ประเภทรายงาน</label>
@@ -283,7 +275,7 @@
                             <option value="date">ประวัติการเบิก (ตามช่วงเวลา)</option>
                         </select>
                     </div>
-
+                    
                     <div id="filterUserContainer" class="hide">
                         <label class="text-sm text-gray-600 block mb-1 font-bold">เลือกผู้ใช้งาน</label>
                         <select id="reportUser" class="w-full border border-gray-300 p-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-highlight text-sm">
@@ -313,12 +305,12 @@
                             🖨️ พิมพ์ / บันทึกเป็น PDF
                         </button>
                     </div>
-
+                    
                     <div class="w-full overflow-x-auto border-4 border-gray-200 rounded-lg bg-gray-200 p-4 shadow-inner">
                         <div id="reportPaper" class="p-8 bg-white text-black mx-auto shadow-sm" style="width: 190mm;">
                             <h1 id="reportTitle" class="text-2xl font-bold text-center mb-2">รายงานสรุปยอดพัสดุคงเหลือ</h1>
                             <p id="reportSubtitle" class="text-center text-gray-600 mb-6 text-sm"></p>
-
+                            
                             <table class="w-full text-left border-collapse border border-gray-300 table-fixed break-words">
                                 <thead id="reportTableHeader" class="bg-gray-100"></thead>
                                 <tbody id="reportTableBody"></tbody>
@@ -362,7 +354,7 @@
         const GAS_URL = 'https://script.google.com/macros/s/AKfycbyqxc4Bf1PkIhnkf9w_BH2gVipOBrI5nDKpLcU6IHVfaAZCyRTxc_qQphJRw3bBdQ8/exec'; 
         const LIFF_ID = '2010045466-Z0Gl17Wk'; 
         // ==========================================
-
+        
         let inventoryItems = [];
         let transactionItems = []; 
         let cart = {};
@@ -376,7 +368,7 @@
         let dashPieChart = null;
         let dashLineChart = null;
         let dashUserChart = null;
-
+        
         let currentEditingItemId = null;
 
         function showLoading(text = 'กำลังโหลดข้อมูล...') {
@@ -443,16 +435,17 @@
                     body: JSON.stringify({ action: 'login', user: currentUser })
                 });
                 const data = await response.json();
-
+                
                 if (data.status === 'success') {
                     userRole = data.role;
                     
                     // 🌟 เพื่อให้ผู้ใช้ทั่วไปดูประวัติได้ จึงทำการดึง Transaction ทุกครั้งที่ Login
                     fetchTransactions();
+
                     if (userRole === 'Admin') {
                         const adminBtn = document.getElementById('adminBtn');
                         adminBtn.classList.remove('hide');
-
+                        
                         if (data.pendingCount > 0) {
                             adminBtn.innerHTML = `Admin <span class="absolute -top-1 -right-1 flex h-3 w-3"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span><span class="relative inline-flex rounded-full h-3 w-3 bg-red-500 border border-white"></span></span>`;
                             adminBtn.classList.add('relative');
@@ -460,7 +453,6 @@
                             adminBtn.innerHTML = 'Admin';
                             adminBtn.classList.remove('relative');
                         }
-                        fetchTransactions(); 
                     }
                     await loadItems();
                 } else {
@@ -481,13 +473,13 @@
             try {
                 const response = await fetch(`${GAS_URL}?action=getItems`);
                 const result = await response.json();
-
+                
                 if (result.status === 'success') {
                     inventoryItems = result.data;
-
+                    
                     const urlParams = new URLSearchParams(window.location.search);
                     const targetCat = urlParams.get('cat');
-
+                    
                     if (targetCat) {
                         const catExists = inventoryItems.some(item => item.category && item.category.trim().toLowerCase() === targetCat.trim().toLowerCase());
                         if (catExists) {
@@ -498,9 +490,9 @@
 
                     renderCategoryTabs();
                     renderItems();
-
+                    
                     hideLoading();
-
+                    
                     const adminView = document.getElementById('adminView');
                     if (adminView.classList.contains('hide')) {
                         document.getElementById('userView').classList.remove('hide');
@@ -530,19 +522,16 @@
                 userView.classList.add('hide');
                 cartBar.classList.add('hide');
                 adminView.classList.remove('hide');
-
+                
                 const currentFilter = document.getElementById('dashCategoryFilter').value || 'all';
                 fetchTransactions(); 
                 fetchUsers(); 
                 renderDashboard(currentFilter);
-                
-                // 🌟 รีเซ็ตให้กลับมาแท็บ Dashboard ทุกครั้งที่กดเข้าโหมดแอดมิน
                 switchAdminTab('dashboard');
             }
         }
 
         // ==========================================
-        // 🌟 ระบบสลับแท็บเมนูแอดมิน (Tab Switcher)
         // 🌟 ระบบสลับแท็บฝั่งผู้ใช้ (User Tabs)
         // ==========================================
         function switchUserTab(tabName) {
@@ -555,16 +544,19 @@
                 el.classList.remove('border-highlight', 'text-dark');
                 el.classList.add('border-transparent', 'text-gray-500');
             });
+
             const targetContent = document.getElementById(`userTab${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`);
             if(targetContent) {
                 targetContent.classList.remove('hide');
                 targetContent.classList.add('block');
             }
+
             const targetBtn = document.getElementById(`btnUserTab${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`);
             if(targetBtn) {
                 targetBtn.classList.remove('border-transparent', 'text-gray-500');
                 targetBtn.classList.add('border-highlight', 'text-dark');
             }
+
             if(tabName === 'history') {
                 document.getElementById('cartBar').classList.add('hide');
                 renderMyHistory(); // โหลดรายการประวัติ
@@ -572,9 +564,11 @@
                 updateCartSummary(); // กลับไปหน้ารายการของ ให้แสดงตะกร้า(ถ้ามี)
             }
         }
+
         function renderMyHistory() {
             const container = document.getElementById('myHistoryList');
             if(!container) return;
+
             // คัดกรองเฉพาะรายการที่เป็นของ currentUser และเป็นประเภท 'เบิก'
             const myTxns = transactionItems.filter(t => t.userId === currentUser.userId && t.type === 'เบิก');
             
@@ -585,8 +579,10 @@
                 </div>`;
                 return;
             }
+
             // เรียงลำดับจากใหม่สุดไปเก่าสุด
             myTxns.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
             container.innerHTML = myTxns.map(t => {
                 return `
                     <div class="border border-gray-200 rounded-xl p-3 hover:bg-gray-50 transition flex justify-between items-center shadow-sm bg-white">
@@ -605,6 +601,7 @@
                 `;
             }).join('');
         }
+
         // ==========================================
         // 🌟 ระบบสลับแท็บฝั่ง Admin
         // ==========================================
@@ -613,7 +610,7 @@
                 el.classList.add('hide');
                 el.classList.remove('block');
             });
-
+            
             document.querySelectorAll('.admin-tab-btn').forEach(el => {
                 el.classList.remove('border-highlight', 'text-dark');
                 el.classList.add('border-transparent', 'text-gray-500');
@@ -690,7 +687,7 @@
 
                     renderCategoryTabs();
                     renderItems();
-
+                    
                     if (!document.getElementById('adminView').classList.contains('hide')) {
                         const currentDashFilter = document.getElementById('dashCategoryFilter');
                         if (currentDashFilter) renderDashboard(currentDashFilter.value);
@@ -835,7 +832,7 @@
                 if (result.status === 'success') {
                     transactionItems = result.data;
                     populateUserFilter(); 
-
+                    
                     if (!document.getElementById('adminView').classList.contains('hide')) {
                         const dashFilter = document.getElementById('dashCategoryFilter');
                         renderDashboard(dashFilter ? dashFilter.value : 'all');
@@ -848,10 +845,10 @@
 
         function renderDashboard(filterCat = 'all') {
             const dashFilter = document.getElementById('dashCategoryFilter');
-
+            
             const activeItems = inventoryItems.filter(item => (item.category ? item.category.trim() : '') !== 'ไม่ใช้งาน');
             const uniqueCats = [...new Set(activeItems.map(i => i.category || 'ทั่วไป'))];
-
+            
             if (dashFilter.options.length <= 1) {
                 dashFilter.innerHTML = '<option value="all">ทุกหมวดหมู่</option>' + uniqueCats.map(c => `<option value="${c}">${c}</option>`).join('');
                 dashFilter.value = filterCat;
@@ -915,20 +912,20 @@
                 if (t.type !== 'เบิก' || t.status !== 'สำเร็จ') return false;
                 const invItem = inventoryItems.find(i => String(i.itemId) === String(t.itemId));
                 const itemCat = invItem ? (invItem.category ? invItem.category.trim() : 'ทั่วไป') : 'ทั่วไป';
-
+                
                 if (itemCat === 'ไม่ใช้งาน') return false;
                 if (filterCat !== 'all' && itemCat !== filterCat) return false;
-
+                
                 return true;
             });
-
+            
             const last7Days = [];
             for(let i=6; i>=0; i--) {
                 const d = new Date();
                 d.setDate(d.getDate() - i);
                 last7Days.push(d.toLocaleDateString('th-TH', {day:'numeric', month:'short'}));
             }
-
+            
             const dailyCounts = new Array(7).fill(0);
             checkouts.forEach(t => {
                 const d = new Date(t.timestamp);
@@ -968,7 +965,7 @@
             checkouts.forEach(t => {
                 userMap[t.userName] = (userMap[t.userName] || 0) + (parseInt(t.quantity) || 0);
             });
-
+            
             const sortedUsers = Object.entries(userMap).sort((a,b) => b[1] - a[1]).slice(0, 5);
             const userLabels = sortedUsers.map(u => u[0].length > 15 ? u[0].substring(0, 15) + '...' : u[0]);
             const userDataCounts = sortedUsers.map(u => u[1]);
@@ -1040,14 +1037,14 @@
             if (type === 'inventory') {
                 title.textContent = 'รายงานสรุปยอดพัสดุคงเหลือ';
                 thead.innerHTML = `<tr><th class="border border-gray-300 p-2 w-2/12">รหัส</th><th class="border border-gray-300 p-2 w-3/12">หมวดหมู่</th><th class="border border-gray-300 p-2 w-4/12">รายการพัสดุ</th><th class="border border-gray-300 p-2 w-2/12 text-center">คงเหลือ</th><th class="border border-gray-300 p-2 w-1/12 text-center">สถานะ</th></tr>`;
-
+                
                 tbody.innerHTML = activeInventoryItems.map(item => {
                     const statusHtml = item.stockQuantity <= item.minimumStock ? `<span class="text-red-500 font-bold">ใกล้หมด</span>` : `<span class="text-green-600">ปกติ</span>`;
                     return `<tr class="border-b border-gray-200"><td class="p-2 text-sm font-mono text-gray-500">${item.itemId}</td><td class="p-2 text-sm">${item.category || 'ทั่วไป'}</td><td class="p-2 text-sm font-bold">${item.itemName}</td><td class="p-2 text-center text-sm font-bold">${item.stockQuantity}</td><td class="p-2 text-center text-sm">${statusHtml}</td></tr>`;
                 }).join('');
             } else if (type === 'user' || type === 'date') {
                 title.textContent = type === 'user' ? 'รายงานประวัติการเบิกพัสดุ (รายบุคคล)' : 'รายงานประวัติการเบิกพัสดุ (ตามช่วงเวลา)';
-
+                
                 let filteredTxns = transactionItems.filter(t => {
                     if (t.type !== 'เบิก' || t.status !== 'สำเร็จ') return false;
                     const invItem = inventoryItems.find(i => String(i.itemId) === String(t.itemId));
@@ -1094,7 +1091,7 @@
             }
 
             const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-
+            
             if (isIOS) {
                 Swal.fire({
                     title: 'กำลังเตรียมเอกสาร...',
@@ -1142,7 +1139,7 @@
             if (fieldId === 'add_itemId' || fieldId === 'add_itemName') autoFillItemInfo(fieldId === 'add_itemId' ? 'id' : 'name');
         }
         function clearAddStockForm() { document.getElementById('addStockForm').reset(); document.getElementById('currentStockHint').classList.add('hide'); }
-
+        
         function fillStockFromLowStock(itemId) {
             document.getElementById('add_itemId').value = itemId;
             autoFillItemInfo('id');
@@ -1156,7 +1153,6 @@
             const userView = document.getElementById('userView');
             if (!userView.classList.contains('hide')) toggleAdminMode();
             setTimeout(() => { 
-                switchAdminTab('dashboard'); // เด้งมาแท็บนำเข้าอัตโนมัติ
                 switchAdminTab('dashboard'); 
                 fillStockFromLowStock(itemId); 
             }, 150);
@@ -1188,17 +1184,17 @@
         function renderCategoryTabs() {
             const tabsContainer = document.getElementById('categoryTabs');
             let uniqueCategories = [...new Set(inventoryItems.map(item => item.category ? item.category.trim() : 'ทั่วไป'))];
-
+            
             if (userRole !== 'Admin') {
                 uniqueCategories = uniqueCategories.filter(c => c !== 'ไม่ใช้งาน');
             }
 
             const allCategories = ['ทั้งหมด', ...uniqueCategories.filter(c => c !== '')];
-
+            
             tabsContainer.innerHTML = allCategories.map(cat => {
                 const isActive = currentCategory === cat;
                 const activeIdAttr = isActive ? 'id="activeCategoryTab"' : '';
-
+                
                 return `<button ${activeIdAttr} onclick="setCategory('${cat}')" class="snap-start px-4 py-1.5 rounded-full text-sm font-bold whitespace-nowrap transition-all duration-200 shadow-sm ${isActive ? 'bg-dark text-highlight scale-105' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-100'}">${cat}</button>`;
             }).join('');
 
@@ -1218,7 +1214,7 @@
             container.innerHTML = '';
             const filteredItems = inventoryItems.filter(item => {
                 const itemCat = item.category ? item.category.trim() : 'ทั่วไป';
-
+                
                 if (userRole !== 'Admin' && itemCat === 'ไม่ใช้งาน') return false;
 
                 const matchCategory = (currentCategory === 'ทั้งหมด') || (itemCat === currentCategory);
@@ -1242,20 +1238,20 @@
 
                 let adminClickAttr = '';
                 let adminHoverClass = '';
-
+                
                 let categoryClickAttr = '';
                 let categoryHoverClass = 'pointer-events-none'; 
-
+                
                 if (userRole === 'Admin') {
                     adminClickAttr = `onclick="goToAddStock('${item.itemId}')" title="คลิกเพื่อนำเข้าพัสดุ"`;
                     adminHoverClass = 'cursor-pointer hover:shadow-md hover:scale-105 transform transition';
-
+                    
                     categoryClickAttr = `onclick="promptChangeCategory(event, '${item.itemId}', '${item.category || 'ทั่วไป'}')" title="คลิกเพื่อเปลี่ยนหมวดหมู่"`;
                     categoryHoverClass = 'cursor-pointer hover:bg-highlight hover:text-dark transition pointer-events-auto shadow-md';
                 }
 
                 const imgUrl = item.imageUrl || 'https://placehold.co/400x400/545859/FFD100?text=No+Image';
-
+                
                 const card = document.createElement('div');
                 card.className = `bg-white rounded-2xl shadow p-3 flex flex-col transition-opacity ${isOutOfStock ? 'opacity-60 grayscale' : ''}`;
                 card.innerHTML = `
@@ -1346,11 +1342,10 @@
                 const rawText = await response.text();
                 let result;
                 try { result = JSON.parse(rawText); } catch(e) { throw new Error("ระบบฝั่ง GAS ตอบกลับมาผิดรูปแบบ"); }
-
+                
                 hideLoading();
                 if (result.status === 'success') {
                     cart = {}; updateCartSummary();
-                    Swal.fire('สำเร็จ!', 'บันทึกการเบิกพัสดุเรียบร้อยแล้วระบบได้แจ้งเตือนไปที่ LINE ของคุณ', 'success').then(() => { fetchTransactions(); loadItems(); });
                     Swal.fire('สำเร็จ!', 'บันทึกการเบิกพัสดุเรียบร้อยแล้วระบบได้แจ้งเตือนไปที่ LINE ของคุณ', 'success').then(() => { 
                         // 🌟 โหลดข้อมูลประวัติใหม่เพื่อให้อัปเดตในแท็บประวัติของฉัน
                         fetchTransactions().then(() => {
@@ -1399,11 +1394,10 @@
                 if (result.status === 'success') {
                     allUsers = result.data;
                     renderUsers();
-
+                    
                     const pendingCount = allUsers.filter(u => u.status === 'Pending').length;
                     const adminBtn = document.getElementById('adminBtn');
-
-                    // เพิ่ม Badge ให้ปุ่มกลับหน้าแรก ถ้าอยู่ในโหมดแอดมินแล้วมีคนรอ
+                    
                     const adminTabUserBtn = document.getElementById('btnTabUsers');
                     if(adminTabUserBtn) {
                         if (pendingCount > 0) {
@@ -1502,5 +1496,3 @@
     </script>
 </body>
 </html>
-
-
