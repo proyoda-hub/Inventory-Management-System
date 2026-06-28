@@ -440,14 +440,14 @@
         let currentUser = null;
         let userRole = 'User';
         let searchQuery = '';
-        let sectionObserver = null; // สำหรับติดตามการเลื่อนหน้าจอ
+        let sectionObserver = null; 
 
         let dashBarChart = null;
         let dashPieChart = null;
         let dashLineChart = null;
         let dashUserChart = null;
         
-        let currentModalItemId = null; // เก็บค่า ID พัสดุที่เปิด Modal อยู่
+        let currentModalItemId = null; 
         let currentEditingItemId = null;
 
         function showLoading(text = 'กำลังโหลดข้อมูล...') {
@@ -552,7 +552,7 @@
                         }
                     }
 
-                    renderItemsGrouped(); // 🌟 วาดรายการแบบใหม่
+                    renderItemsGrouped();
                     
                     hideLoading();
                     
@@ -561,11 +561,13 @@
                         document.getElementById('userView').classList.remove('hide');
                         if(Object.keys(cart).length > 0) document.getElementById('cartBar').classList.remove('hide');
                         
-                        // ถ้าเข้าผ่านลิงก์พารามิเตอร์ ให้เลื่อนหน้าจอไปหมวดหมู่นั้น
                         if(targetElementId) {
                             setTimeout(() => {
                                 const el = document.getElementById(targetElementId);
-                                if(el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                if(el) {
+                                    const y = el.getBoundingClientRect().top + window.scrollY - 130;
+                                    window.scrollTo({top: y, behavior: 'smooth'});
+                                }
                             }, 300);
                         }
                     } else {
@@ -577,7 +579,7 @@
         }
 
         // ==========================================
-        // 🌟 NEW: ระบบวาดรายการพัสดุเป็นกลุ่ม (Food App Style)
+        // 🌟 ระบบวาดรายการพัสดุเป็นกลุ่ม (Food App Style)
         // ==========================================
         function renderItemsGrouped() {
             const container = document.getElementById('itemList');
@@ -592,10 +594,10 @@
 
             // 2. สร้างแท็บหมวดหมู่ด้านบน
             tabsContainer.innerHTML = uniqueCategories.map((cat, index) => {
-                return `<button onclick="scrollToCategory('section-${cat}')" id="tab-${cat}" class="category-tab-btn snap-start px-4 py-1.5 rounded-full text-sm font-bold whitespace-nowrap transition-all duration-200 shadow-sm ${index === 0 ? 'bg-dark text-highlight scale-105' : 'bg-white text-gray-600 border border-gray-200'}">${cat}</button>`;
+                return `<button onclick="scrollToCategory('section-${cat}')" id="tab-${cat}" class="category-tab-btn snap-start px-4 py-1.5 rounded-full text-sm font-bold whitespace-nowrap transition-all duration-200 shadow-sm ${index === 0 ? 'bg-dark text-highlight scale-105' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-100'}">${cat}</button>`;
             }).join('');
 
-            // 3. กรองข้อมูลตามคำค้นหา (ถ้ามี)
+            // 3. กรองข้อมูลตามคำค้นหา
             const filteredAll = inventoryItems.filter(item => {
                 const itemCat = item.category ? item.category.trim() : 'ทั่วไป';
                 if (userRole !== 'Admin' && itemCat === 'ไม่ใช้งาน') return false;
@@ -604,112 +606,110 @@
             });
 
             if (filteredAll.length === 0) {
-                container.innerHTML = `<div class="text-center text-gray-500 py-10 bg-white rounded-2xl shadow-sm border border-dashed border-gray-300 mt-4"><div class="text-4xl mb-2">🔍</div><div class="font-bold">ไม่พบพัสดุ</div><div class="text-sm">ลองค้นหาด้วยคำอื่นดูนะครับ</div></div>`;
+                container.innerHTML = `<div class="text-center text-gray-500 py-10 bg-white rounded-2xl shadow-sm border border-dashed border-gray-300 mt-4"><div class="text-4xl mb-2">🔍</div><div class="font-bold">ไม่พบพัสดุ</div><div class="text-sm">ลองค้นหาด้วยคำอื่น</div></div>`;
                 return;
             }
 
-            // 4. วาดรายการแยกตามหมวดหมู่
+            // 4. จัดกลุ่ม (Grouping) ตามหมวดหมู่ และวาดหน้าจอ (Food App Style)
             uniqueCategories.forEach(cat => {
-                const itemsInCat = filteredAll.filter(i => (i.category ? i.category.trim() : 'ทั่วไป') === cat);
-                if (itemsInCat.length === 0) return; // ถ้าหมวดนี้ไม่มีของที่ค้นเจอ ให้ข้ามไป
+                const itemsInCat = filteredAll.filter(item => (item.category ? item.category.trim() : 'ทั่วไป') === cat);
+                if (itemsInCat.length === 0) return; // ข้ามหมวดที่ไม่มีของ
 
-                // สร้าง Section Header
                 const section = document.createElement('div');
                 section.id = `section-${cat}`;
-                section.className = 'category-section pt-4 pb-2 scroll-mt-[120px]'; // scroll-mt ช่วยไม่ให้โดน Navbar ทับตอนเลื่อน
+                section.className = 'category-section pt-4 pb-2'; // class สำหรับ Observer
                 
-                let html = `<h3 class="font-bold text-xl text-dark mb-3 border-b-2 border-highlight inline-block pb-1">${cat}</h3>`;
-                html += `<div class="flex flex-col">`;
+                section.innerHTML = `
+                    <h3 class="text-lg font-bold text-dark mb-3 border-b-2 border-highlight inline-block pb-1">${cat}</h3>
+                    <div class="space-y-4">
+                        ${itemsInCat.map(item => {
+                            const isOutOfStock = item.stockQuantity <= 0;
+                            const isLowStock = !isOutOfStock && item.stockQuantity <= item.minimumStock;
+                            const imgUrl = item.imageUrl || 'https://placehold.co/400x400/545859/FFD100?text=No+Image';
+                            
+                            let stockStatusHtml = `<span class="text-xs text-gray-500">เหลือ ${item.stockQuantity} ${item.unit}</span>`;
+                            if (isOutOfStock) stockStatusHtml = `<span class="text-xs font-bold text-red-500 bg-red-50 px-2 py-0.5 rounded">หมด</span>`;
+                            else if (isLowStock) stockStatusHtml = `<span class="text-xs font-bold text-yellow-600 bg-yellow-50 px-2 py-0.5 rounded">ใกล้หมด (${item.stockQuantity})</span>`;
 
-                // สร้าง Item Row แต่ละรายการ
-                itemsInCat.forEach(item => {
-                    const qtyInCart = cart[item.itemId] || 0;
-                    const isOutOfStock = item.stockQuantity <= 0;
-                    
-                    const imgUrl = item.imageUrl || 'https://placehold.co/400x400/545859/FFD100?text=No+Image';
-
-                    // ปุ่ม Admin แอบอยู่ขวาบนของ Row
-                    let adminButtons = '';
-                    if (userRole === 'Admin') {
-                        adminButtons = `
-                        <div class="absolute right-0 top-0 flex flex-col gap-1.5" onclick="event.stopPropagation()">
-                            <button onclick="goToAddStock('${item.itemId}')" class="w-7 h-7 bg-white text-blue-600 rounded-full shadow border border-gray-100 flex items-center justify-center hover:bg-blue-50 transition" title="นำเข้าพัสดุ"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg></button>
-                            <button onclick="promptChangeCategory(event, '${item.itemId}', '${item.category || 'ทั่วไป'}')" class="w-7 h-7 bg-white text-purple-600 rounded-full shadow border border-gray-100 flex items-center justify-center hover:bg-purple-50 transition" title="เปลี่ยนหมวดหมู่"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" /></svg></button>
-                        </div>`;
-                    }
-
-                    html += `
-                        <div class="relative flex py-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors ${isOutOfStock ? 'opacity-60 grayscale' : ''}" onclick="openItemModal('${item.itemId}')">
-                            <div class="w-24 h-24 shrink-0 rounded-xl overflow-hidden bg-gray-200 border border-gray-100 shadow-sm relative">
-                                <img src="${imgUrl}" onerror="this.src='https://placehold.co/400x400/545859/FFD100?text=No+Image'" class="w-full h-full object-cover">
-                                ${qtyInCart > 0 ? `<div class="absolute top-1 right-1 bg-highlight text-dark text-xs font-black w-6 h-6 flex items-center justify-center rounded-full border-2 border-white shadow">${qtyInCart}</div>` : ''}
-                            </div>
-                            <div class="ml-4 flex flex-col flex-1 pr-8">
-                                <div class="font-bold text-dark text-base leading-tight line-clamp-2">${item.itemName}</div>
-                                <div class="text-[11px] text-gray-400 font-mono mt-1">${item.itemId}</div>
-                                
-                                <div class="mt-auto flex items-center justify-between">
-                                    <span class="text-xs font-bold px-2 py-0.5 rounded border ${isOutOfStock ? 'bg-gray-100 text-gray-500 border-gray-200' : 'bg-green-50 text-green-700 border-green-200'}">
-                                        เหลือ ${item.stockQuantity} ${item.unit}
-                                    </span>
+                            let adminIcons = '';
+                            if (userRole === 'Admin') {
+                                adminIcons = `
+                                    <div class="absolute top-2 right-2 flex gap-1 z-10">
+                                        <button onclick="event.stopPropagation(); promptChangeCategory(event, '${item.itemId}', '${item.category || 'ทั่วไป'}')" class="w-7 h-7 bg-white/90 backdrop-blur rounded-full shadow flex items-center justify-center text-xs hover:bg-highlight hover:text-dark transition">⚙️</button>
+                                        <button onclick="event.stopPropagation(); goToAddStock('${item.itemId}')" class="w-7 h-7 bg-white/90 backdrop-blur rounded-full shadow flex items-center justify-center text-xs hover:bg-highlight hover:text-dark transition">➕</button>
+                                    </div>
+                                `;
+                            }
+                            
+                            return `
+                            <div class="flex items-start gap-4 bg-white p-3 rounded-2xl shadow-sm border border-gray-100 cursor-pointer hover:shadow-md transition relative ${isOutOfStock ? 'opacity-70 grayscale-[50%]' : ''}" onclick="openItemModal('${item.itemId}')">
+                                ${adminIcons}
+                                <div class="w-24 h-24 rounded-xl bg-gray-100 overflow-hidden flex-shrink-0 shadow-inner">
+                                    <img src="${imgUrl}" onerror="this.src='https://placehold.co/400x400/545859/FFD100?text=No+Image'" class="w-full h-full object-cover">
+                                </div>
+                                <div class="flex-1 min-w-0 flex flex-col h-24 justify-between">
+                                    <div>
+                                        <div class="text-sm font-bold text-dark leading-tight line-clamp-2">${item.itemName}</div>
+                                        <div class="text-[10px] text-gray-400 font-mono mt-1">${item.itemId}</div>
+                                    </div>
+                                    <div class="flex justify-between items-end mt-auto">
+                                        ${stockStatusHtml}
+                                        <div class="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-primary shadow border border-gray-200">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" /></svg>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                            ${adminButtons}
-                        </div>
-                    `;
-                });
-                
-                html += `</div>`;
-                section.innerHTML = html;
+                            `;
+                        }).join('')}
+                    </div>
+                `;
                 container.appendChild(section);
             });
 
-            setupScrollSpy(); // ติดตั้งระบบติดตามการเลื่อนหน้าจอ
+            // 5. ติดตั้ง Intersection Observer สำหรับ Scrollspy
+            setupScrollspy();
         }
 
-        // ==========================================
-        // 🌟 NEW: Scrollspy (เลื่อนจอแล้วแท็บเปลี่ยนตาม)
-        // ==========================================
-        function setupScrollSpy() {
-            if (sectionObserver) sectionObserver.disconnect();
+        function scrollToCategory(sectionId) {
+            const el = document.getElementById(sectionId);
+            if(el) {
+                const y = el.getBoundingClientRect().top + window.scrollY - 130;
+                window.scrollTo({top: y, behavior: 'smooth'});
+            }
+        }
 
+        function setupScrollspy() {
+            if(sectionObserver) sectionObserver.disconnect();
+            
             const sections = document.querySelectorAll('.category-section');
-            if(sections.length === 0) return;
+            const options = {
+                root: null,
+                rootMargin: '-135px 0px -50% 0px', 
+                threshold: 0
+            };
 
             sectionObserver = new IntersectionObserver((entries) => {
                 entries.forEach(entry => {
                     if (entry.isIntersecting) {
                         const catId = entry.target.id.replace('section-', '');
-                        updateActiveTab(catId);
+                        
+                        document.querySelectorAll('.category-tab-btn').forEach(btn => {
+                            btn.classList.remove('bg-dark', 'text-highlight', 'scale-105');
+                            btn.classList.add('bg-white', 'text-gray-600');
+                        });
+
+                        const activeBtn = document.getElementById(`tab-${catId}`);
+                        if (activeBtn) {
+                            activeBtn.classList.remove('bg-white', 'text-gray-600');
+                            activeBtn.classList.add('bg-dark', 'text-highlight', 'scale-105');
+                            activeBtn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                        }
                     }
                 });
-            }, { 
-                rootMargin: "-120px 0px -60% 0px" // จุดตัด Trigger ให้เปลี่ยนแท็บ (ประมาณขอบบนจอ)
-            });
+            }, options);
 
-            sections.forEach(section => sectionObserver.observe(section));
-        }
-
-        function updateActiveTab(cat) {
-            document.querySelectorAll('.category-tab-btn').forEach(btn => {
-                btn.classList.remove('bg-dark', 'text-highlight', 'scale-105');
-                btn.classList.add('bg-white', 'text-gray-600', 'border', 'border-gray-200');
-            });
-            const activeBtn = document.getElementById(`tab-${cat}`);
-            if (activeBtn) {
-                activeBtn.classList.add('bg-dark', 'text-highlight', 'scale-105');
-                activeBtn.classList.remove('bg-white', 'text-gray-600', 'border', 'border-gray-200');
-                activeBtn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
-            }
-        }
-
-        function scrollToCategory(sectionId) {
-            const el = document.getElementById(sectionId);
-            if (el) {
-                // เลื่อนให้หัวข้อหมวดหมู่มาอยู่ใต้ Navbar พอดี
-                const y = el.getBoundingClientRect().top + window.pageYOffset - 120;
-                window.scrollTo({top: y, behavior: 'smooth'});
-            }
+            sections.forEach(sec => sectionObserver.observe(sec));
         }
 
         function handleSearch(query) { 
@@ -718,8 +718,75 @@
         }
 
         // ==========================================
-        // 🌟 NEW: Full-Screen Item Modal Logic
+        // 🌟 Full-Screen Item Modal Logic & Edit
         // ==========================================
+        window.promptChangeCategory = function(event, itemId, currentCategory) {
+            if(event) event.stopPropagation();
+            if (userRole !== 'Admin') return;
+
+            const uniqueCats = [...new Set(inventoryItems.map(i => i.category || 'ทั่วไป'))].filter(c => c !== '');
+            let optionsHtml = uniqueCats.map(c => `<option value="${c}" ${c === currentCategory ? 'selected' : ''}>${c}</option>`).join('');
+
+            Swal.fire({
+                title: 'เปลี่ยนหมวดหมู่',
+                html: `
+                    <div class="text-sm text-gray-600 mb-4 bg-gray-100 p-2 rounded">รหัสพัสดุ: <b>${itemId}</b></div>
+                    <div class="text-left mb-3">
+                        <label class="text-sm font-bold text-dark">เลือกจากที่มีอยู่:</label>
+                        <select id="swal-cat-select" class="w-full border border-gray-300 p-2.5 rounded-lg mt-1 focus:ring-2 focus:ring-highlight focus:outline-none" 
+                            onchange="document.getElementById('swal-cat-input').value = this.value">
+                            <option value="">-- เลือกหมวดหมู่ --</option>
+                            ${optionsHtml}
+                        </select>
+                    </div>
+                    <div class="text-left">
+                        <label class="text-sm font-bold text-dark">หรือ พิมพ์หมวดหมู่ใหม่:</label>
+                        <input type="text" id="swal-cat-input" class="w-full border border-gray-300 p-2.5 rounded-lg mt-1 focus:ring-2 focus:ring-highlight focus:outline-none" value="${currentCategory}">
+                    </div>
+                `,
+                showCancelButton: true, confirmButtonColor: '#545859', cancelButtonColor: '#d33',
+                confirmButtonText: 'ถัดไป', cancelButtonText: 'ยกเลิก',
+                preConfirm: () => { return document.getElementById('swal-cat-input').value.trim(); }
+            }).then((result) => {
+                if (result.isConfirmed && result.value) {
+                    const newCategory = result.value;
+                    if (newCategory === currentCategory) return; 
+
+                    Swal.fire({
+                        title: 'ยืนยันการเปลี่ยนหมวดหมู่',
+                        html: `คุณต้องการเปลี่ยนหมวดหมู่<br>จาก <b class="text-red-500">"${currentCategory}"</b> เป็น <b class="text-green-600">"${newCategory}"</b><br>ใช่หรือไม่?`,
+                        icon: 'question', showCancelButton: true, confirmButtonColor: '#3B82F6', cancelButtonColor: '#545859',
+                        confirmButtonText: 'ยืนยันการเปลี่ยน', cancelButtonText: 'ยกเลิก'
+                    }).then((confirmResult) => {
+                        if (confirmResult.isConfirmed) updateCategoryInGAS(itemId, newCategory);
+                    });
+                }
+            });
+        }
+
+        async function updateCategoryInGAS(itemId, newCategory) {
+            showLoading('กำลังเปลี่ยนหมวดหมู่...');
+            try {
+                const payload = { action: 'updateCategory', itemId: itemId, newCategory: newCategory };
+                const response = await fetch(GAS_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(payload) });
+                const result = await response.json();
+                hideLoading();
+
+                if (result.status === 'success') {
+                    const itemIndex = inventoryItems.findIndex(i => String(i.itemId) === String(itemId));
+                    if(itemIndex > -1) inventoryItems[itemIndex].category = newCategory;
+
+                    renderItemsGrouped();
+                    
+                    if (!document.getElementById('adminView').classList.contains('hide')) {
+                        const currentDashFilter = document.getElementById('dashCategoryFilter');
+                        if (currentDashFilter) renderDashboard(currentDashFilter.value);
+                    }
+                    Swal.fire({ icon: 'success', title: 'เปลี่ยนหมวดหมู่สำเร็จ', timer: 1500, showConfirmButton: false });
+                } else { Swal.fire('ผิดพลาด', result.message, 'error'); }
+            } catch (err) { hideLoading(); Swal.fire('ผิดพลาด', 'เชื่อมต่อล้มเหลว', 'error'); }
+        }
+
         function openItemModal(itemId) {
             const item = inventoryItems.find(i => String(i.itemId) === String(itemId));
             if (!item) return;
@@ -733,20 +800,16 @@
             document.getElementById('modalItemCategory').textContent = item.category || 'ทั่วไป';
             document.getElementById('modalItemStock').textContent = `${item.stockQuantity} ${item.unit}`;
             
-            // ดึงจำนวนที่มีในตะกร้ามาแสดง ถ้าไม่มีให้เริ่มที่ 1 (ถ้าของหมดให้เป็น 0)
             let initialQty = cart[itemId] || 1;
             if (item.stockQuantity <= 0) initialQty = 0;
             document.getElementById('modalQtyInput').value = initialQty;
 
             const modal = document.getElementById('itemDetailModal');
             modal.classList.remove('hide');
-            // ใช้ setTimeout เพื่อให้ transition ทำงาน
             setTimeout(() => { modal.classList.remove('translate-y-full'); }, 10);
             
-            // ซ่อนแถบตะกร้าหลักชั่วคราว
             document.getElementById('cartBar').style.display = 'none';
 
-            // จัดการปุ่ม แอดมินจัดการรูป ใน Modal
             let imgContainer = document.getElementById('modalItemImg').parentElement;
             let existingAdminCtrl = document.getElementById('modalAdminControls');
             if(existingAdminCtrl) existingAdminCtrl.remove();
@@ -762,7 +825,6 @@
                 imgContainer.appendChild(adminCtrl);
             }
 
-            // ถ้าของหมด ปิดการทำงานปุ่ม
             const addBtn = document.getElementById('modalAddBtn');
             const qtyInput = document.getElementById('modalQtyInput');
             if (item.stockQuantity <= 0) {
@@ -785,7 +847,6 @@
             modal.classList.add('translate-y-full');
             setTimeout(() => { modal.classList.add('hide'); }, 300);
             
-            // แสดงแถบตะกร้าหลักกลับมา (ถ้ามีของ)
             document.getElementById('cartBar').style.display = '';
             updateCartSummary();
         }
@@ -799,7 +860,7 @@
             const item = inventoryItems.find(i => String(i.itemId) === String(currentModalItemId));
             if(!item) return;
 
-            if (newValue < 0) newValue = 0; // ให้ลดเหลือ 0 ได้เพื่อลบออกจากตะกร้า
+            if (newValue < 0) newValue = 0; 
             if (newValue > item.stockQuantity) {
                 Swal.fire('ข้อผิดพลาด', `สามารถเบิกได้สูงสุด ${item.stockQuantity} เท่านั้น`, 'warning');
                 newValue = item.stockQuantity;
@@ -827,16 +888,106 @@
             if (qty > 0) {
                 cart[currentModalItemId] = qty;
             } else {
-                delete cart[currentModalItemId]; // ถ้าเป็น 0 ถือว่าลบออก
+                delete cart[currentModalItemId]; 
             }
             
-            renderItemsGrouped(); // อัปเดตตัวเลขบนรูป
+            renderItemsGrouped(); 
             closeItemModal();
         }
 
-        // ==========================================
-        // ฟังก์ชันอื่นๆ คงเดิม
-        // ==========================================
+        window.triggerImageUpload = function(itemId, source) {
+            currentEditingItemId = itemId;
+            const uploader = document.getElementById('imageUploader');
+            if (source === 'camera') uploader.setAttribute('capture', 'environment');
+            else uploader.removeAttribute('capture');
+            uploader.click();
+        }
+
+        window.processImageSelection = function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            Swal.fire({
+                title: 'ยืนยันเปลี่ยนรูปภาพ?', text: "รูปภาพเก่าจะถูกลบและแทนที่ด้วยรูปนี้", icon: 'warning',
+                showCancelButton: true, confirmButtonColor: '#3B82F6', cancelButtonColor: '#545859',
+                confirmButtonText: 'ตกลง (อัปโหลด)', cancelButtonText: 'ยกเลิก'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    showLoading('กำลังบีบอัดและอัปโหลดรูปภาพ...');
+                    const reader = new FileReader();
+                    reader.readAsDataURL(file);
+                    reader.onload = function(e) {
+                        const img = new Image();
+                        img.src = e.target.result;
+                        img.onload = function() {
+                            const canvas = document.createElement('canvas');
+                            const ctx = canvas.getContext('2d');
+                            const MAX_SIZE = 800;
+                            let width = img.width, height = img.height;
+
+                            if (width > height && width > MAX_SIZE) { height *= MAX_SIZE / width; width = MAX_SIZE; } 
+                            else if (height > MAX_SIZE) { width *= MAX_SIZE / height; height = MAX_SIZE; }
+
+                            canvas.width = width; canvas.height = height;
+                            ctx.drawImage(img, 0, 0, width, height);
+
+                            const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+                            uploadImageToGAS(compressedBase64, 'image/jpeg');
+                        }
+                    }
+                } else { document.getElementById('imageUploader').value = ''; }
+            });
+        }
+
+        async function uploadImageToGAS(base64Data, mimeType) {
+            const payload = { action: 'uploadImage', itemId: currentEditingItemId, base64: base64Data, mimeType: mimeType };
+            try {
+                const response = await fetch(GAS_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(payload) });
+                const result = await response.json();
+                if (result.status === 'success') {
+                    const itemIndex = inventoryItems.findIndex(i => String(i.itemId) === String(currentEditingItemId));
+                    if(itemIndex > -1) inventoryItems[itemIndex].imageUrl = result.imageUrl;
+                    
+                    renderItemsGrouped();
+                    document.getElementById('imageUploader').value = ''; 
+                    
+                    if (currentModalItemId === currentEditingItemId) {
+                        document.getElementById('modalItemImg').src = result.imageUrl;
+                    }
+                    
+                    Swal.fire({ icon: 'success', title: 'สำเร็จ', text: 'บันทึกรูปภาพเรียบร้อย', timer: 1500, showConfirmButton: false });
+                } else {
+                    hideLoading(); Swal.fire('ผิดพลาด', 'อัปโหลดไม่สำเร็จ: ' + result.message, 'error');
+                }
+            } catch (err) { hideLoading(); Swal.fire('ผิดพลาด', 'เชื่อมต่อล้มเหลว', 'error'); } finally { hideLoading(); }
+        }
+
+        window.deleteItemImage = function(itemId) {
+            Swal.fire({
+                title: 'ยืนยันลบรูปภาพ?', text: "รูปภาพนี้จะถูกลบออกจาก Google Drive ถาวร", icon: 'warning',
+                showCancelButton: true, confirmButtonColor: '#EF4444', cancelButtonColor: '#545859',
+                confirmButtonText: 'ลบรูปภาพ', cancelButtonText: 'ยกเลิก'
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    showLoading('กำลังลบรูปภาพ...');
+                    try {
+                        const response = await fetch(GAS_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'deleteImage', itemId: itemId }) });
+                        const res = await response.json();
+                        if (res.status === 'success') {
+                            const itemIndex = inventoryItems.findIndex(i => String(i.itemId) === String(itemId));
+                            if(itemIndex > -1) inventoryItems[itemIndex].imageUrl = '';
+                            
+                            renderItemsGrouped();
+                            if (currentModalItemId === itemId) {
+                                document.getElementById('modalItemImg').src = 'https://placehold.co/800x800/545859/FFD100?text=No+Image';
+                            }
+                            
+                            Swal.fire({ icon: 'success', title: 'ลบสำเร็จ', timer: 1500, showConfirmButton: false });
+                        } else { hideLoading(); Swal.fire('ผิดพลาด', 'ลบไม่สำเร็จ: ' + res.message, 'error'); }
+                    } catch (err) { hideLoading(); Swal.fire('ผิดพลาด', 'เชื่อมต่อล้มเหลว', 'error'); } finally { hideLoading(); }
+                }
+            });
+        }
 
         function updateCartSummary() {
             const typesCount = Object.keys(cart).length;
@@ -893,8 +1044,6 @@
             } catch (error) { hideLoading(); showError('ไม่สามารถเชื่อมต่อได้: ' + error.message); }
         }
 
-        // ... (ฟังก์ชันอื่นๆ ของ Admin / Image / Tabs ยังทำงานเหมือนเดิม 100%) ...
-        
         function switchUserTab(tabName) {
             document.querySelectorAll('.user-tab-content').forEach(el => { el.classList.add('hide'); el.classList.remove('block'); });
             document.querySelectorAll('.user-tab-btn').forEach(el => { el.classList.remove('bg-dark', 'text-highlight'); el.classList.add('bg-white', 'text-gray-600'); });
