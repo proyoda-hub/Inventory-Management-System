@@ -140,54 +140,53 @@
         </div>
     </main>
 
-    <!-- 🌟 หน้าต่าง Full Screen Modal สำหรับดูรายละเอียดพัสดุ -->
-    <div id="itemDetailModal" class="fixed inset-0 z-[60] bg-white hide flex-col transform transition-transform duration-300 translate-y-full">
+    <!-- 🌟 หน้าต่าง Full Screen Modal สำหรับดูรายละเอียดพัสดุ (อัปเดตแก้ปัญหาคีย์บอร์ด iOS) -->
+    <div id="itemDetailModal" class="fixed inset-x-0 top-0 z-[60] bg-white hide flex-col transform transition-transform duration-300 translate-y-full" style="height: 100%;">
         <!-- ปุ่มปิด (X) กึ่งโปร่งใสซ้อนบนรูป -->
         <button onclick="closeItemModal()" class="absolute top-4 left-4 z-[70] w-10 h-10 bg-black/50 text-white rounded-full flex items-center justify-center backdrop-blur-sm hover:bg-black/70">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
         </button>
 
-        <!-- โซนรูปภาพ (ครึ่งบน) -->
-        <div class="w-full h-[40vh] bg-gray-100 relative">
-            <img id="modalItemImg" src="" class="w-full h-full object-cover">
-        </div>
-
-        <!-- โซนรายละเอียด (ครึ่งล่าง เลื่อนได้ถ้าเนื้อหาเยอะ) -->
-        <div class="flex-1 overflow-y-auto p-5 pb-24">
-            <h2 id="modalItemName" class="text-2xl font-bold text-dark leading-tight mb-1"></h2>
-            <p id="modalItemId" class="text-sm text-gray-400 font-mono mb-4"></p>
-            
-            <div class="flex justify-between items-center bg-gray-50 p-4 rounded-xl border border-gray-100 mb-6">
-                <div>
-                    <div class="text-xs text-gray-500 mb-1">หมวดหมู่</div>
-                    <div id="modalItemCategory" class="font-bold text-sm bg-highlight/20 text-yellow-800 px-2 py-0.5 rounded w-fit"></div>
+        <!-- โซนรูปภาพและรายละเอียด (มัดรวมให้อยู่ในพื้นที่เลื่อนได้ เพื่อไม่ให้บังบาร์ด้านล่าง) -->
+        <div class="flex-1 overflow-y-auto pb-4">
+            <div class="w-full h-[40vh] bg-gray-100 relative shrink-0">
+                <img id="modalItemImg" src="" class="w-full h-full object-cover">
+            </div>
+            <div class="p-5">
+                <h2 id="modalItemName" class="text-2xl font-bold text-dark leading-tight mb-1"></h2>
+                <p id="modalItemId" class="text-sm text-gray-400 font-mono mb-4"></p>
+                
+                <div class="flex justify-between items-center bg-gray-50 p-4 rounded-xl border border-gray-100 mb-6">
+                    <div>
+                        <div class="text-xs text-gray-500 mb-1">หมวดหมู่</div>
+                        <div id="modalItemCategory" class="font-bold text-sm bg-highlight/20 text-yellow-800 px-2 py-0.5 rounded w-fit"></div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-xs text-gray-500 mb-1">คงเหลือในคลัง</div>
+                        <div id="modalItemStock" class="font-black text-lg text-primary"></div>
+                    </div>
                 </div>
-                <div class="text-right">
-                    <div class="text-xs text-gray-500 mb-1">คงเหลือในคลัง</div>
-                    <div id="modalItemStock" class="font-black text-lg text-primary"></div>
+
+                <div class="text-sm text-gray-600 border-t border-gray-100 pt-4">
+                    <p>รายละเอียดพัสดุ:</p>
+                    <p class="mt-2 text-gray-400 italic">ไม่มีข้อมูลเพิ่มเติม</p>
                 </div>
             </div>
-
-            <!-- พื้นที่ใส่คำอธิบายเพิ่มเติมในอนาคต (ถ้ามี) -->
-            <div class="text-sm text-gray-600 border-t border-gray-100 pt-4">
-                <p>รายละเอียดพัสดุ:</p>
-                <p class="mt-2 text-gray-400 italic">ไม่มีข้อมูลเพิ่มเติม</p>
-            </div>
         </div>
 
-        <!-- แถบด้านล่าง (ใส่ตะกร้า) -->
-        <div class="absolute bottom-0 left-0 w-full bg-white border-t border-gray-200 p-4 shadow-[0_-4px_15px_-3px_rgba(0,0,0,0.1)] flex items-center justify-between gap-4 z-[70]">
-            <!-- ชุดปรับลดจำนวน -->
-            <div class="flex items-center bg-gray-100 rounded-xl p-1 w-1/3 max-w-[140px]">
-                <button onclick="changeModalQty(-1)" class="w-10 h-10 rounded-lg bg-white shadow flex items-center justify-center text-primary font-black hover:bg-gray-50">-</button>
+        <!-- แถบด้านล่าง (ใส่ตะกร้า) อัปเดตให้กว้างขึ้นและอยู่เหนือคีย์บอร์ด -->
+        <div class="w-full bg-white border-t border-gray-200 p-4 shadow-[0_-4px_15px_-3px_rgba(0,0,0,0.1)] flex items-center justify-between gap-3 z-[70] shrink-0 pb-safe">
+            <!-- ชุดปรับลดจำนวน (ขยายกว้างขึ้นรองรับหลักพัน) -->
+            <div class="flex items-center bg-gray-100 rounded-xl p-1 w-[160px] shrink-0">
+                <button onclick="changeModalQty(-1)" class="w-11 h-11 rounded-lg bg-white shadow flex items-center justify-center text-primary font-black hover:bg-gray-50 text-xl">-</button>
                 <input type="number" id="modalQtyInput" value="1" min="1" 
-                    class="flex-1 text-center font-bold text-lg bg-transparent outline-none border-none text-dark w-full px-1" 
+                    class="flex-1 text-center font-bold text-xl bg-transparent outline-none border-none text-dark w-full px-1" 
                     onchange="validateModalQty(this.value)"
                     onfocus="this.select()">
-                <button onclick="changeModalQty(1)" class="w-10 h-10 rounded-lg bg-white shadow flex items-center justify-center text-primary font-black hover:bg-gray-50">+</button>
+                <button onclick="changeModalQty(1)" class="w-11 h-11 rounded-lg bg-white shadow flex items-center justify-center text-primary font-black hover:bg-gray-50 text-xl">+</button>
             </div>
             <!-- ปุ่มเพิ่มลงตะกร้า -->
-            <button id="modalAddBtn" onclick="confirmModalCart()" class="flex-1 bg-highlight text-dark font-bold text-lg py-3 rounded-xl shadow-md hover:bg-yellow-400 transition flex justify-center items-center gap-2">
+            <button id="modalAddBtn" onclick="confirmModalCart()" class="flex-1 bg-highlight text-dark font-bold text-lg py-3 rounded-xl shadow-md hover:bg-yellow-400 transition flex justify-center items-center gap-2 truncate px-2">
                 เพิ่มลงตะกร้า
             </button>
         </div>
@@ -205,7 +204,7 @@
     </div>
 
     <!-- ========================================== -->
-    <!-- Admin View (คงเดิม แต่ซ่อนไว้เมื่อโหลด) -->
+    <!-- Admin View -->
     <!-- ========================================== -->
     <main id="adminView" class="hide p-4 max-w-5xl mx-auto">
         <div class="flex justify-between items-center mb-4">
@@ -461,6 +460,17 @@
 
         window.onload = function() {
             showLoading();
+
+            // 🌟 แจ้งให้ Modal อัปเดตความสูงตามหน้าจอจริงๆ (ช่วยแก้ปัญหาคีย์บอร์ด iOS)
+            if (window.visualViewport) {
+                window.visualViewport.addEventListener('resize', () => {
+                    const modal = document.getElementById('itemDetailModal');
+                    if (modal && !modal.classList.contains('hide')) {
+                        modal.style.height = window.visualViewport.height + 'px';
+                    }
+                });
+            }
+
             if (window.location.protocol === 'blob:' || window.location.protocol === 'data:') {
                 console.warn('ใช้งานในโหมด Preview ระบบจะจำลองผู้ใช้งาน (Mock Login) อัตโนมัติ');
                 mockLogin();
@@ -610,14 +620,14 @@
                 return;
             }
 
-            // 4. จัดกลุ่ม (Grouping) ตามหมวดหมู่ และวาดหน้าจอ (Food App Style)
+            // 4. จัดกลุ่ม (Grouping) ตามหมวดหมู่ และวาดหน้าจอ
             uniqueCategories.forEach(cat => {
                 const itemsInCat = filteredAll.filter(item => (item.category ? item.category.trim() : 'ทั่วไป') === cat);
-                if (itemsInCat.length === 0) return; // ข้ามหมวดที่ไม่มีของ
+                if (itemsInCat.length === 0) return; 
 
                 const section = document.createElement('div');
                 section.id = `section-${cat}`;
-                section.className = 'category-section pt-4 pb-2'; // class สำหรับ Observer
+                section.className = 'category-section pt-4 pb-2'; 
                 
                 section.innerHTML = `
                     <h3 class="text-lg font-bold text-dark mb-3 border-b-2 border-highlight inline-block pb-1">${cat}</h3>
@@ -683,11 +693,7 @@
             if(sectionObserver) sectionObserver.disconnect();
             
             const sections = document.querySelectorAll('.category-section');
-            const options = {
-                root: null,
-                rootMargin: '-135px 0px -50% 0px', 
-                threshold: 0
-            };
+            const options = { root: null, rootMargin: '-135px 0px -50% 0px', threshold: 0 };
 
             sectionObserver = new IntersectionObserver((entries) => {
                 entries.forEach(entry => {
@@ -805,6 +811,7 @@
             document.getElementById('modalQtyInput').value = initialQty;
 
             const modal = document.getElementById('itemDetailModal');
+            if (window.visualViewport) modal.style.height = window.visualViewport.height + 'px';
             modal.classList.remove('hide');
             setTimeout(() => { modal.classList.remove('translate-y-full'); }, 10);
             
@@ -844,6 +851,7 @@
 
         function closeItemModal() {
             const modal = document.getElementById('itemDetailModal');
+            modal.style.height = '100%'; 
             modal.classList.add('translate-y-full');
             setTimeout(() => { modal.classList.add('hide'); }, 300);
             
@@ -1122,7 +1130,7 @@
                 document.getElementById('add_itemId').value = selectedItem.itemId; document.getElementById('add_itemName').value = selectedItem.itemName; document.getElementById('add_category').value = selectedItem.category || ''; document.getElementById('add_unit').value = selectedItem.unit || ''; document.getElementById('add_min').value = selectedItem.minimumStock || '';
                 stockHint.textContent = `✅ มีในระบบ: คงเหลือ ${selectedItem.stockQuantity} ${selectedItem.unit}`; stockHint.classList.remove('hide', 'text-yellow-600'); stockHint.classList.add('text-blue-600');
             } else if (itemIdInput || itemNameInput) {
-                stockHint.textContent = `✨ สร้างพัสดุรายการใหม่`; stockHint.classList.remove('hide', 'text-blue-600'); stockHint.classList.add('text-yellow-600');
+                stockHint.textContent = `✨ สร้างพัสดรายการใหม่`; stockHint.classList.remove('hide', 'text-blue-600'); stockHint.classList.add('text-yellow-600');
             } else { stockHint.classList.add('hide'); }
         }
 
